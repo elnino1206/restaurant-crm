@@ -16,7 +16,7 @@
     </style>
 </head>
 <body class="bg-gray-50 min-h-screen"
-      x-data="dashboard('{{ $apiBase }}', '{{ $token }}')"
+      x-data="dashboard('{{ $apiBase }}', '{{ $token }}', '{{ $restaurant['timezone'] ?? 'UTC' }}')"
       x-init="init()">
 
 {{-- ═══════ HEADER ═══════ --}}
@@ -297,8 +297,9 @@
 </style>
 
 <script>
-function dashboard(apiBase, token) {
-    const today = new Date().toISOString().slice(0, 10);
+function dashboard(apiBase, token, tz) {
+    // Дата YYYY-MM-DD в timezone ресторана
+    const todayInTz = () => new Date().toLocaleDateString('en-CA', { timeZone: tz });
 
     const apiFetch = (path, opts = {}) =>
         fetch(apiBase + path, {
@@ -313,9 +314,9 @@ function dashboard(apiBase, token) {
         });
 
     return {
-        apiBase, token,
-        date:     today,
-        todayStr: today,
+        apiBase, token, tz,
+        date:     todayInTz(),
+        todayStr: todayInTz(),
         bookings: [],
         loading:  false,
         error:    null,
@@ -353,13 +354,14 @@ function dashboard(apiBase, token) {
         // ── Date navigation ────────────────────────────────────────
 
         shiftDay(delta) {
-            const d = new Date(this.date + 'T00:00:00');
+            // Используем noon чтобы избежать DST-прыжков
+            const d = new Date(this.date + 'T12:00:00');
             d.setDate(d.getDate() + delta);
-            this.date = d.toISOString().slice(0, 10);
+            this.date = d.toLocaleDateString('en-CA', { timeZone: this.tz });
             this.reload();
         },
         goToday() {
-            this.date = this.todayStr;
+            this.date = todayInTz();
             this.reload();
         },
 
@@ -448,12 +450,18 @@ function dashboard(apiBase, token) {
 
         hm(iso) {
             if (!iso) return '—';
-            const d = new Date(iso);
-            return String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
+            // Показываем время в timezone ресторана, а не браузера
+            return new Date(iso).toLocaleTimeString('ru-RU', {
+                timeZone: this.tz,
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: false,
+            });
         },
 
         humanDate(str) {
-            const d = new Date(str + 'T00:00:00');
+            // Noon чтобы парсинг не сдвинул дату при часовых поясах
+            const d = new Date(str + 'T12:00:00');
             const days   = ['воскресенье','понедельник','вторник','среда','четверг','пятница','суббота'];
             const months = ['янв','фев','мар','апр','май','июн','июл','авг','сен','окт','ноя','дек'];
             return `${d.getDate()} ${months[d.getMonth()]}, ${days[d.getDay()]}`;

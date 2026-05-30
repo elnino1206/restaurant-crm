@@ -748,11 +748,19 @@
 
 <script>
 function booking(slug, timezone, restaurantName, address) {
-    const today    = new Date();
-    const tomorrow = new Date(today); tomorrow.setDate(today.getDate() + 1);
 
-    function toDateStr(d) {
-        return d.toISOString().slice(0, 10);
+    // Дата YYYY-MM-DD в timezone ресторана (не UTC браузера)
+    function dateInTz(tz, offsetDays = 0) {
+        const d = new Date();
+        d.setDate(d.getDate() + offsetDays);
+        return d.toLocaleDateString('en-CA', { timeZone: tz }); // en-CA → YYYY-MM-DD
+    }
+
+    // Текущий час в timezone ресторана
+    function hourInTz(tz) {
+        return parseInt(new Date().toLocaleTimeString('en-US', {
+            timeZone: tz, hour: '2-digit', hour12: false
+        }), 10);
     }
 
     return {
@@ -763,9 +771,9 @@ function booking(slug, timezone, restaurantName, address) {
 
         // state
         guests:       2,
-        selectedDate: toDateStr(today),
-        todayStr:     toDateStr(today),
-        tomorrowStr:  toDateStr(tomorrow),
+        selectedDate: dateInTz(timezone),
+        todayStr:     dateInTz(timezone),
+        tomorrowStr:  dateInTz(timezone, 1),
         weekDays:     [],
         period:       'all',
         allSlots:     [],
@@ -802,13 +810,13 @@ function booking(slug, timezone, restaurantName, address) {
             this.$watch('guests', () => { this.selectedSlot = null; this.loadSlots(); });
         },
 
-        // выбирает нужный период по текущему времени и выбранной дате
+        // выбирает период по текущему часу в timezone ресторана
         autoPeriod() {
             if (this.selectedDate !== this.todayStr) {
                 this.period = 'all';
                 return;
             }
-            const h = new Date().getHours();
+            const h = hourInTz(this.timezone);
             if (h >= 17)      this.period = 'evening';
             else if (h >= 12) this.period = 'all';
             else               this.period = 'day';
@@ -816,15 +824,15 @@ function booking(slug, timezone, restaurantName, address) {
 
         buildWeekDays() {
             const names = ['Вс','Пн','Вт','Ср','Чт','Пт','Сб'];
-            const today = new Date();
-            today.setHours(0,0,0,0);
+            const todayStr = this.todayStr;
             this.weekDays = Array.from({ length: 14 }, (_, i) => {
-                const d = new Date(today); d.setDate(today.getDate() + i);
+                const ds  = dateInTz(timezone, i);
+                const d   = new Date(ds + 'T12:00:00'); // полдень чтобы избежать DST
                 return {
-                    date: toDateStr(d),
+                    date: ds,
                     name: names[d.getDay()],
                     num:  d.getDate(),
-                    past: d < today,
+                    past: ds < todayStr,
                 };
             });
         },
@@ -931,7 +939,8 @@ function booking(slug, timezone, restaurantName, address) {
 
         formatSelectedDate() {
             if (!this.selectedDate) return '';
-            const d = new Date(this.selectedDate + 'T00:00:00');
+            // Добавляем T12:00 чтобы парсинг всегда был в tz ресторана
+            const d = new Date(this.selectedDate + 'T12:00:00');
             const days  = ['вс','пн','вт','ср','чт','пт','сб'];
             const months= ['янв','фев','мар','апр','май','июн','июл','авг','сен','окт','ноя','дек'];
             return `${days[d.getDay()]}, ${d.getDate()} ${months[d.getMonth()]}`;
