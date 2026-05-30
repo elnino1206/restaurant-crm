@@ -30,8 +30,9 @@ class BookingController extends Controller
 
         if ($request->filled('date')) {
             $timezone = auth()->user()->restaurant?->timezone ?? 'UTC';
-            $start = Carbon::createFromFormat('Y-m-d', $request->input('date'), $timezone)->startOfDay()->utc();
-            $end = $start->copy()->endOfDay();
+            $day = Carbon::createFromFormat('Y-m-d', $request->input('date'), $timezone);
+            $start = $day->copy()->startOfDay()->utc();
+            $end = $day->copy()->endOfDay()->utc();
             $query->whereBetween('booking_start', [$start, $end]);
         }
 
