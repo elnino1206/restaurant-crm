@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\V1\RestaurantController;
 use App\Http\Controllers\Api\V1\RestaurantsController;
 use App\Http\Controllers\Api\V1\SlotController;
 use App\Http\Controllers\Api\V1\TableController;
+use App\Http\Controllers\Api\V1\TimeSlotConfigController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function (): void {
@@ -49,6 +50,8 @@ Route::prefix('v1')->group(function (): void {
         Route::get('/restaurants/{restaurant}', [RestaurantsController::class, 'show']);
         Route::patch('/restaurants/{restaurant}', [RestaurantsController::class, 'update']);
         Route::get('/restaurants/{restaurant}/floors', [RestaurantsController::class, 'floors']);
+        Route::get('/restaurants/{restaurant}/time-slot-configs', [TimeSlotConfigController::class, 'index']);
+        Route::put('/restaurants/{restaurant}/time-slot-configs', [TimeSlotConfigController::class, 'bulkUpdate']);
 
         // Floor management
         Route::post('/restaurants/{restaurant}/floors', [FloorController::class, 'store']);

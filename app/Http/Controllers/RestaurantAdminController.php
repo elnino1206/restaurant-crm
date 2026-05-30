@@ -63,10 +63,38 @@ class RestaurantAdminController extends Controller
 
     public function edit(string $id)
     {
-        $restaurant = $this->api()->get("{$this->base}/restaurants/{$id}")->json('data', []);
-        $floors = $this->api()->get("{$this->base}/restaurants/{$id}/floors")->json('data', []);
+        $api = $this->api();
+        $restaurant = $api->get("{$this->base}/restaurants/{$id}")->json('data', []);
+        $floors = $api->get("{$this->base}/restaurants/{$id}/floors")->json('data', []);
+        $schedule = $api->get("{$this->base}/restaurants/{$id}/time-slot-configs")->json('data', []);
 
-        return view('admin.restaurants.edit', compact('restaurant', 'floors'));
+        return view('admin.restaurants.edit', compact('restaurant', 'floors', 'schedule'));
+    }
+
+    public function updateSchedule(Request $request, string $id): RedirectResponse
+    {
+        $configs = [];
+        foreach (range(0, 6) as $day) {
+            $isDayOff = $request->boolean("days.{$day}.is_day_off");
+            $configs[] = [
+                'day_of_week' => $day,
+                'is_day_off' => $isDayOff,
+                'open_time' => $isDayOff ? null : $request->input("days.{$day}.open_time"),
+                'close_time' => $isDayOff ? null : $request->input("days.{$day}.close_time"),
+                'slot_duration' => (int) $request->input("days.{$day}.slot_duration", 30),
+                'booking_duration' => (int) $request->input("days.{$day}.booking_duration", 120),
+            ];
+        }
+
+        $response = $this->api()->put("{$this->base}/restaurants/{$id}/time-slot-configs", [
+            'configs' => $configs,
+        ]);
+
+        if ($response->failed()) {
+            return back()->withErrors($response->json('errors', []))->withInput();
+        }
+
+        return back()->with('success', 'Расписание обновлено.');
     }
 
     public function update(Request $request, string $id): RedirectResponse

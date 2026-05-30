@@ -23,6 +23,9 @@ Route::prefix('admin')->name('admin.')->group(function () {
     Route::get('restaurants/{restaurant}/edit', [RestaurantAdminController::class, 'edit'])->name('restaurants.edit');
     Route::put('restaurants/{restaurant}', [RestaurantAdminController::class, 'update'])->name('restaurants.update');
 
+    // Schedule
+    Route::put('restaurants/{restaurant}/schedule', [RestaurantAdminController::class, 'updateSchedule'])->name('restaurants.schedule.update');
+
     // Floors
     Route::post('restaurants/{restaurant}/floors', [RestaurantAdminController::class, 'storeFloor'])->name('restaurants.floors.store');
     Route::put('restaurants/{restaurant}/floors/{floor}', [RestaurantAdminController::class, 'updateFloor'])->name('restaurants.floors.update');

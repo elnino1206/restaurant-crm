@@ -374,6 +374,173 @@
         @endif
     </section>
 
+    {{-- ═══════════════════════════════════════
+         СЕКЦИЯ 3: Режим работы
+    ════════════════════════════════════════ --}}
+    <section x-data="scheduleEditor({{ json_encode($schedule) }})">
+        <div class="flex items-center justify-between mb-3">
+            <div>
+                <h2 class="text-lg font-semibold">Режим работы</h2>
+                <p class="text-sm text-gray-400 mt-0.5">Задаёт доступные слоты на странице бронирования</p>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-xl shadow overflow-hidden">
+            <form method="POST" action="{{ route('admin.restaurants.schedule.update', $restaurant['id']) }}">
+                @csrf
+                @method('PUT')
+
+                {{-- Global defaults --}}
+                <div class="px-6 py-4 bg-gray-50 border-b flex flex-wrap gap-6 items-end">
+                    <div>
+                        <label class="block text-xs font-medium text-gray-500 mb-1">Шаг слота (мин)</label>
+                        <select x-model="globalSlot" @change="applyGlobal('slot_duration', $event.target.value)"
+                                class="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                            <option value="15">15 мин</option>
+                            <option value="30">30 мин</option>
+                            <option value="60">1 час</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-500 mb-1">Длина брони (мин)</label>
+                        <select x-model="globalBooking" @change="applyGlobal('booking_duration', $event.target.value)"
+                                class="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                            <option value="60">1 час</option>
+                            <option value="90">1.5 часа</option>
+                            <option value="120">2 часа</option>
+                            <option value="180">3 часа</option>
+                        </select>
+                    </div>
+                    <div class="flex gap-2">
+                        <button type="button" @click="setAllOpen()"
+                                class="text-sm text-indigo-600 hover:text-indigo-800 px-3 py-1.5 rounded border border-indigo-200 hover:bg-indigo-50 transition">
+                            Открыть все
+                        </button>
+                        <button type="button" @click="setAllClosed()"
+                                class="text-sm text-gray-500 hover:text-gray-700 px-3 py-1.5 rounded border border-gray-200 hover:bg-gray-100 transition">
+                            Закрыть все
+                        </button>
+                    </div>
+                </div>
+
+                {{-- Days table --}}
+                <table class="min-w-full text-sm">
+                    <thead class="bg-gray-50 border-b">
+                        <tr class="text-left text-xs text-gray-400 uppercase tracking-wide">
+                            <th class="px-5 py-2 w-28">День</th>
+                            <th class="px-5 py-2 w-24">Статус</th>
+                            <th class="px-5 py-2">Открытие</th>
+                            <th class="px-5 py-2">Закрытие</th>
+                            <th class="px-5 py-2 w-28">Слот</th>
+                            <th class="px-5 py-2 w-28">Длина брони</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <template x-for="(day, i) in days" :key="day.day_of_week">
+                            <tr class="border-b last:border-0" :class="day.is_day_off ? 'bg-gray-50' : 'bg-white'">
+                                <td class="px-5 py-3 font-medium" x-text="dayNames[day.day_of_week]"></td>
+                                <td class="px-5 py-3">
+                                    <label class="flex items-center gap-2 cursor-pointer select-none">
+                                        <input type="hidden" :name="`days[${day.day_of_week}][is_day_off]`" :value="day.is_day_off ? '1' : '0'">
+                                        <button type="button" @click="day.is_day_off = !day.is_day_off"
+                                                class="relative inline-flex h-5 w-9 rounded-full transition-colors"
+                                                :class="day.is_day_off ? 'bg-gray-300' : 'bg-indigo-500'">
+                                            <span class="inline-block h-4 w-4 rounded-full bg-white shadow transform transition-transform mt-0.5"
+                                                  :class="day.is_day_off ? 'translate-x-0.5' : 'translate-x-4'"></span>
+                                        </button>
+                                        <span class="text-xs" :class="day.is_day_off ? 'text-gray-400' : 'text-gray-700'"
+                                              x-text="day.is_day_off ? 'Выходной' : 'Работает'"></span>
+                                    </label>
+                                </td>
+                                <td class="px-5 py-3">
+                                    <input type="time" :name="`days[${day.day_of_week}][open_time]`"
+                                           x-model="day.open_time" :disabled="day.is_day_off"
+                                           class="border border-gray-300 rounded-lg px-2 py-1.5 text-sm w-28 focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-30 disabled:bg-gray-50">
+                                </td>
+                                <td class="px-5 py-3">
+                                    <input type="time" :name="`days[${day.day_of_week}][close_time]`"
+                                           x-model="day.close_time" :disabled="day.is_day_off"
+                                           class="border border-gray-300 rounded-lg px-2 py-1.5 text-sm w-28 focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-30 disabled:bg-gray-50">
+                                </td>
+                                <td class="px-5 py-3">
+                                    <select :name="`days[${day.day_of_week}][slot_duration]`"
+                                            x-model="day.slot_duration" :disabled="day.is_day_off"
+                                            class="border border-gray-300 rounded-lg px-2 py-1.5 text-sm w-24 focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-30 disabled:bg-gray-50">
+                                        <option value="15">15 мин</option>
+                                        <option value="30">30 мин</option>
+                                        <option value="60">1 час</option>
+                                    </select>
+                                </td>
+                                <td class="px-5 py-3">
+                                    <select :name="`days[${day.day_of_week}][booking_duration]`"
+                                            x-model="day.booking_duration" :disabled="day.is_day_off"
+                                            class="border border-gray-300 rounded-lg px-2 py-1.5 text-sm w-28 focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-30 disabled:bg-gray-50">
+                                        <option value="60">1 час</option>
+                                        <option value="90">1.5 часа</option>
+                                        <option value="120">2 часа</option>
+                                        <option value="180">3 часа</option>
+                                    </select>
+                                </td>
+                            </tr>
+                        </template>
+                    </tbody>
+                </table>
+
+                <div class="px-6 py-4 border-t bg-gray-50">
+                    <button type="submit"
+                            class="bg-indigo-600 text-white px-5 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700 transition">
+                        Сохранить расписание
+                    </button>
+                </div>
+            </form>
+        </div>
+    </section>
+
 </div>
+
+<script>
+function scheduleEditor(apiData) {
+    const dayNames = ['Понедельник','Вторник','Среда','Четверг','Пятница','Суббота','Воскресенье'];
+
+    // Build 7-day array (fill gaps from API data)
+    const byDay = {};
+    (apiData || []).forEach(c => { byDay[c.day_of_week] = c; });
+
+    const days = Array.from({ length: 7 }, (_, i) => {
+        const d = byDay[i] || {};
+        return {
+            day_of_week:      i,
+            is_day_off:       d.is_day_off !== undefined ? d.is_day_off : true,
+            open_time:        d.open_time  || '11:00',
+            close_time:       d.close_time || '23:00',
+            slot_duration:    String(d.slot_duration    || 30),
+            booking_duration: String(d.booking_duration || 120),
+        };
+    });
+
+    const firstWorking = days.find(d => !d.is_day_off);
+
+    return {
+        dayNames,
+        days,
+        globalSlot:    firstWorking ? String(firstWorking.slot_duration)    : '30',
+        globalBooking: firstWorking ? String(firstWorking.booking_duration)  : '120',
+
+        applyGlobal(field, value) {
+            this.days.forEach(d => { if (!d.is_day_off) d[field] = value; });
+        },
+        setAllOpen() {
+            this.days.forEach(d => {
+                d.is_day_off = false;
+                if (!d.open_time)  d.open_time  = '11:00';
+                if (!d.close_time) d.close_time = '23:00';
+            });
+        },
+        setAllClosed() {
+            this.days.forEach(d => { d.is_day_off = true; });
+        },
+    };
+}
+</script>
 </body>
 </html>

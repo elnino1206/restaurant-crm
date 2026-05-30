@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use App\Domains\Restaurant\Models\Floor;
 use App\Domains\Restaurant\Models\Restaurant;
 use App\Domains\Restaurant\Models\Table;
+use App\Domains\Restaurant\Models\TimeSlotConfig;
 use App\Domains\User\Enums\UserRole;
 use App\Models\User;
 use Illuminate\Database\Seeder;
@@ -57,6 +58,30 @@ class DatabaseSeeder extends Seeder
                     'capacity' => $n * 2,
                     'min_capacity' => 1,
                     'is_active' => true,
+                ]
+            );
+        }
+
+        // Work schedule: Mon–Fri 11:00–23:00, Sat–Sun 11:00–00:00
+        $schedule = [
+            0 => ['open' => '11:00', 'close' => '23:00', 'off' => false], // Пн
+            1 => ['open' => '11:00', 'close' => '23:00', 'off' => false], // Вт
+            2 => ['open' => '11:00', 'close' => '23:00', 'off' => false], // Ср
+            3 => ['open' => '11:00', 'close' => '23:00', 'off' => false], // Чт
+            4 => ['open' => '11:00', 'close' => '23:00', 'off' => false], // Пт
+            5 => ['open' => '11:00', 'close' => '23:00', 'off' => false], // Сб
+            6 => ['open' => '11:00', 'close' => '22:00', 'off' => false], // Вс
+        ];
+
+        foreach ($schedule as $day => $cfg) {
+            TimeSlotConfig::updateOrCreate(
+                ['restaurant_id' => $restaurant->id, 'day_of_week' => $day],
+                [
+                    'open_time' => $cfg['open'],
+                    'close_time' => $cfg['close'],
+                    'slot_duration' => 30,
+                    'booking_duration' => 120,
+                    'is_day_off' => $cfg['off'],
                 ]
             );
         }
