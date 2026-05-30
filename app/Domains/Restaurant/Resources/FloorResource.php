@@ -2,18 +2,18 @@
 
 namespace App\Domains\Restaurant\Resources;
 
+use App\Shared\Http\ApiResource;
 use Illuminate\Http\Request;
-use Illuminate\Http\Resources\Json\JsonResource;
 
-class FloorResource extends JsonResource
+class FloorResource extends ApiResource
 {
     public function toArray(Request $request): array
     {
         return [
-            'id'         => $this->id,
-            'name'       => $this->name,
+            'id' => $this->id,
+            'name' => $this->name,
             'sort_order' => $this->sort_order,
-            'tables'     => TableResource::collection($this->whenLoaded('tables')),
+            'tables' => TableResource::collection($this->whenLoaded('tables')),
         ];
     }
 }
