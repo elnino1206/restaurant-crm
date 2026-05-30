@@ -15,11 +15,11 @@ class UpdateRestaurantRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name'      => ['sometimes', 'string', 'max:200'],
-            'timezone'  => ['sometimes', 'string', 'timezone'],
-            'phone'     => ['sometimes', 'nullable', 'string', 'max:20'],
-            'address'   => ['sometimes', 'nullable', 'string', 'max:500'],
-            'settings'  => ['sometimes', 'nullable', 'array'],
+            'name' => ['sometimes', 'string', 'max:200'],
+            'timezone' => ['sometimes', 'string', 'timezone'],
+            'phone' => ['sometimes', 'nullable', 'string', 'max:20'],
+            'address' => ['sometimes', 'nullable', 'string', 'max:500'],
+            'settings' => ['sometimes', 'nullable', 'array'],
             'is_active' => ['sometimes', 'boolean'],
         ];
     }
@@ -27,12 +27,12 @@ class UpdateRestaurantRequest extends FormRequest
     public function toDTO(): UpdateRestaurantDTO
     {
         return UpdateRestaurantDTO::from([
-            'name'     => $this->input('name'),
+            'name' => $this->input('name'),
             'timezone' => $this->input('timezone'),
-            'phone'    => $this->input('phone'),
-            'address'  => $this->input('address'),
+            'phone' => $this->input('phone'),
+            'address' => $this->input('address'),
             'settings' => $this->input('settings'),
-            'isActive' => $this->boolean('is_active'),
+            'isActive' => $this->has('is_active') ? $this->boolean('is_active') : null,
         ]);
     }
 }
