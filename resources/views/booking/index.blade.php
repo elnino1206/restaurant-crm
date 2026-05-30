@@ -586,10 +586,23 @@
 
                         {{-- Time period --}}
                         <div class="section">
-                            <p class="section-label">Время</p>
+                            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:14px;">
+                                <p class="section-label" style="margin-bottom:0;">Время</p>
+                                {{-- Подсказка о прошедших слотах --}}
+                                <span x-show="slotsHint"
+                                      x-text="slotsHint"
+                                      style="font-size:11px; color:var(--text-3); text-align:right; max-width:180px; line-height:1.3;"></span>
+                            </div>
+
                             <div class="period-tabs" style="margin-bottom: 16px;">
                                 <button class="period-tab" :class="{ active: period === 'all' }" @click="period = 'all'">Все</button>
-                                <button class="period-tab" :class="{ active: period === 'day' }" @click="period = 'day'">День</button>
+                                <button class="period-tab"
+                                    :class="{ active: period === 'day' }"
+                                    @click="period = 'day'">
+                                    День
+                                    <span x-show="period !== 'day' && allSlots.filter(s => parseInt(s) < 17).length === 0 && allSlots.length > 0"
+                                          style="font-size:9px; opacity:.5; margin-left:2px;">·</span>
+                                </button>
                                 <button class="period-tab" :class="{ active: period === 'evening' }" @click="period = 'evening'">Вечер</button>
                             </div>
 
@@ -602,8 +615,29 @@
                                 <div>
                                     <template x-if="filteredSlots.length === 0">
                                         <div class="slots-empty">
-                                            <span x-show="allSlots.length === 0">На выбранную дату мест нет</span>
-                                            <span x-show="allSlots.length > 0">Нет слотов для выбранного периода</span>
+                                            <template x-if="allSlots.length === 0">
+                                                <div>
+                                                    <div style="font-size:24px; margin-bottom:8px;">😔</div>
+                                                    <div>На выбранную дату мест нет</div>
+                                                    <div style="font-size:12px; margin-top:4px; color:var(--text-3);">Попробуйте другую дату</div>
+                                                </div>
+                                            </template>
+                                            <template x-if="allSlots.length > 0 && period === 'day'">
+                                                <div>
+                                                    <div style="font-size:24px; margin-bottom:8px;">🌆</div>
+                                                    <div>Дневные слоты закончились</div>
+                                                    <div style="font-size:12px; margin-top:6px; color:var(--text-3);">
+                                                        Доступно вечернее время —
+                                                        <button @click="period = 'evening'"
+                                                                style="background:none;border:none;color:var(--accent);font-size:12px;cursor:pointer;text-decoration:underline;padding:0;">
+                                                            показать вечер
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </template>
+                                            <template x-if="allSlots.length > 0 && period !== 'day'">
+                                                <div>Нет слотов для выбранного периода</div>
+                                            </template>
                                         </div>
                                     </template>
                                     <template x-if="filteredSlots.length > 0">
@@ -737,6 +771,7 @@ function booking(slug, timezone, restaurantName, address) {
         allSlots:     [],
         selectedSlot: null,
         loadingSlots: false,
+        slotsHint:    '',
 
         // contact form
         step:         'select',
@@ -761,9 +796,22 @@ function booking(slug, timezone, restaurantName, address) {
         // init
         init() {
             this.buildWeekDays();
+            this.autoPeriod();
             this.loadSlots();
 
             this.$watch('guests', () => { this.selectedSlot = null; this.loadSlots(); });
+        },
+
+        // выбирает нужный период по текущему времени и выбранной дате
+        autoPeriod() {
+            if (this.selectedDate !== this.todayStr) {
+                this.period = 'all';
+                return;
+            }
+            const h = new Date().getHours();
+            if (h >= 17)      this.period = 'evening';
+            else if (h >= 12) this.period = 'all';
+            else               this.period = 'day';
         },
 
         buildWeekDays() {
@@ -784,6 +832,7 @@ function booking(slug, timezone, restaurantName, address) {
         setDate(date) {
             this.selectedDate = date;
             this.selectedSlot = null;
+            this.autoPeriod();
             this.loadSlots();
         },
 
@@ -805,8 +854,20 @@ function booking(slug, timezone, restaurantName, address) {
                 });
                 const data = await r.json();
                 this.allSlots = data.slots || [];
+
+                // Подсказка: сегодня часть слотов скрыта из-за прошедшего времени
+                if (this.selectedDate === this.todayStr && this.allSlots.length > 0) {
+                    const first = this.allSlots[0];
+                    const h = parseInt(first.split(':')[0]);
+                    this.slotsHint = h > 11
+                        ? `Слоты до ${first} уже прошли`
+                        : '';
+                } else {
+                    this.slotsHint = '';
+                }
             } catch {
                 this.allSlots = [];
+                this.slotsHint = '';
             } finally {
                 this.loadingSlots = false;
             }
