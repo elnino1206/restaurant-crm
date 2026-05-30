@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\BookingPageController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\RestaurantAdminController;
 use Illuminate\Support\Facades\Route;
@@ -9,6 +10,11 @@ Route::get('/', function () {
 });
 
 Route::get('/dashboard', [DashboardController::class, 'index']);
+
+// Public booking page
+Route::get('/book/{slug}', [BookingPageController::class, 'show'])->name('booking.show');
+Route::post('/book/{slug}/slots', [BookingPageController::class, 'slots'])->name('booking.slots');
+Route::post('/book/{slug}', [BookingPageController::class, 'book'])->name('booking.store');
 
 Route::prefix('admin')->name('admin.')->group(function () {
     Route::get('restaurants', [RestaurantAdminController::class, 'index'])->name('restaurants.index');
