@@ -2,51 +2,79 @@
 
 namespace App\Http\Controllers;
 
+use Illuminate\Http\Client\PendingRequest;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 
 class DashboardController extends Controller
 {
-    private string $apiBase;
+    private string $base;
 
     public function __construct()
     {
-        // Внутри Docker PHP-контейнер обращается к Nginx по имени сервиса
-        $internalHost = env('API_INTERNAL_URL', 'http://nginx');
-        $this->apiBase = $internalHost.'/api/v1';
+        $this->base = env('API_INTERNAL_URL', 'http://nginx').'/api/v1';
     }
 
-    public function index()
+    private function api(): PendingRequest
     {
-        $token = $this->getToken();
+        static $token = null;
 
         if (! $token) {
-            return view('index', ['error' => 'Не удалось получить токен API']);
+            $token = Http::post("{$this->base}/auth/login", [
+                'email' => 'owner@test-restaurant.com',
+                'password' => 'password',
+            ])->json('data.token');
         }
 
-        $api = Http::withToken($token)->acceptJson();
-
-        $restaurant = $api->get("{$this->apiBase}/restaurant")->json('data', []);
-        $floors = $api->get("{$this->apiBase}/restaurant/floors")->json('data', []);
-        $timeSlotConfig = $api->get("{$this->apiBase}/restaurant/time-slot-configs")->json('data', []);
-        $bookings = $api->get("{$this->apiBase}/bookings")->json('data', []);
-        $customers = $api->get("{$this->apiBase}/customers")->json('data', []);
-
-        return view('index', compact(
-            'restaurant',
-            'floors',
-            'timeSlotConfig',
-            'bookings',
-            'customers',
-        ));
+        return Http::withToken($token)->acceptJson();
     }
 
-    private function getToken(): ?string
+    public function index(Request $request)
     {
-        $response = Http::post("{$this->apiBase}/auth/login", [
-            'email' => 'owner@test-restaurant.com',
-            'password' => 'password',
-        ]);
+        $date = $request->input('date', now()->format('Y-m-d'));
+        $api = $this->api();
 
-        return $response->json('data.token');
+        $restaurant = $api->get("{$this->base}/restaurant")->json('data', []);
+        $bookings = $api->get("{$this->base}/bookings", ['date' => $date])->json('data', []);
+        $floors = $api->get("{$this->base}/restaurant/floors")->json('data', []);
+
+        return view('dashboard', compact('restaurant', 'bookings', 'floors', 'date'));
+    }
+
+    public function fetchBookings(Request $request): JsonResponse
+    {
+        $date = $request->input('date', now()->format('Y-m-d'));
+        $bookings = $this->api()->get("{$this->base}/bookings", ['date' => $date])->json('data', []);
+
+        return response()->json(['bookings' => $bookings]);
+    }
+
+    public function action(Request $request, string $bookingId, string $action): JsonResponse
+    {
+        $api = $this->api();
+
+        $response = match ($action) {
+            'confirm' => $api->post("{$this->base}/bookings/{$bookingId}/confirm"),
+            'cancel' => $api->post("{$this->base}/bookings/{$bookingId}/cancel", [
+                'reason' => $request->input('reason'),
+            ]),
+            'complete' => $api->post("{$this->base}/bookings/{$bookingId}/complete"),
+            'no-show' => $api->post("{$this->base}/bookings/{$bookingId}/no-show"),
+            default => null,
+        };
+
+        if (! $response) {
+            return response()->json(['message' => 'Неизвестное действие.'], 400);
+        }
+
+        return response()->json($response->json());
+    }
+
+    public function update(Request $request, string $bookingId): JsonResponse
+    {
+        $response = $this->api()->patch("{$this->base}/bookings/{$bookingId}", $request->all());
+
+        return response()->json($response->json(), $response->status());
     }
 }

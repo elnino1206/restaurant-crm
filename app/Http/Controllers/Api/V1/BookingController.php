@@ -8,7 +8,6 @@ use App\Domains\Booking\Actions\ConfirmBookingAction;
 use App\Domains\Booking\Actions\CreateBookingAction;
 use App\Domains\Booking\Actions\MarkNoShowAction;
 use App\Domains\Booking\Actions\UpdateBookingAction;
-use App\Domains\Booking\Exceptions\BookingNotFoundException;
 use App\Domains\Booking\Models\Booking;
 use App\Domains\Booking\Requests\CancelBookingRequest;
 use App\Domains\Booking\Requests\ConfirmBookingRequest;
@@ -19,6 +18,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Support\Carbon;
 
 class BookingController extends Controller
 {
@@ -26,10 +26,20 @@ class BookingController extends Controller
     {
         $this->authorize('viewAny', Booking::class);
 
-        $bookings = Booking::with(['customer', 'table'])
-            ->cursorPaginate(15);
+        $query = Booking::with(['customer', 'table'])->orderBy('booking_start');
 
-        return BookingResource::collection($bookings);
+        if ($request->filled('date')) {
+            $timezone = auth()->user()->restaurant?->timezone ?? 'UTC';
+            $start = Carbon::createFromFormat('Y-m-d', $request->input('date'), $timezone)->startOfDay()->utc();
+            $end = $start->copy()->endOfDay();
+            $query->whereBetween('booking_start', [$start, $end]);
+        }
+
+        if ($request->filled('status')) {
+            $query->where('status', $request->input('status'));
+        }
+
+        return BookingResource::collection($query->cursorPaginate(100));
     }
 
     public function store(CreateBookingRequest $request): JsonResponse
