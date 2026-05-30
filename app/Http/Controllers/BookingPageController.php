@@ -40,7 +40,7 @@ class BookingPageController extends Controller
         $slots = app(SlotCalculator::class)->calculate(
             SlotQueryDTO::from([
                 'restaurantId' => $restaurant->id,
-                'date' => Carbon::parse($request->input('date')),
+                'date' => Carbon::parse($request->input('date'), $restaurant->timezone),
                 'guestsCount' => $request->integer('guests_count'),
                 'durationMinutes' => $request->integer('duration_minutes', 120),
             ])
