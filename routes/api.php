@@ -3,8 +3,11 @@
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\BookingController;
 use App\Http\Controllers\Api\V1\CustomerController;
+use App\Http\Controllers\Api\V1\FloorController;
 use App\Http\Controllers\Api\V1\RestaurantController;
+use App\Http\Controllers\Api\V1\RestaurantsController;
 use App\Http\Controllers\Api\V1\SlotController;
+use App\Http\Controllers\Api\V1\TableController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function (): void {
@@ -39,5 +42,22 @@ Route::prefix('v1')->group(function (): void {
 
         // Available slots
         Route::get('/slots', [SlotController::class, 'index']);
+
+        // Admin: all restaurants (super_admin)
+        Route::get('/restaurants', [RestaurantsController::class, 'index']);
+        Route::post('/restaurants', [RestaurantsController::class, 'store']);
+        Route::get('/restaurants/{restaurant}', [RestaurantsController::class, 'show']);
+        Route::patch('/restaurants/{restaurant}', [RestaurantsController::class, 'update']);
+        Route::get('/restaurants/{restaurant}/floors', [RestaurantsController::class, 'floors']);
+
+        // Floor management
+        Route::post('/restaurants/{restaurant}/floors', [FloorController::class, 'store']);
+        Route::patch('/restaurants/{restaurant}/floors/{floor}', [FloorController::class, 'update']);
+        Route::delete('/restaurants/{restaurant}/floors/{floor}', [FloorController::class, 'destroy']);
+
+        // Table management
+        Route::post('/restaurants/{restaurant}/floors/{floor}/tables', [TableController::class, 'store']);
+        Route::patch('/restaurants/{restaurant}/tables/{table}', [TableController::class, 'update']);
+        Route::delete('/restaurants/{restaurant}/tables/{table}', [TableController::class, 'destroy']);
     });
 });

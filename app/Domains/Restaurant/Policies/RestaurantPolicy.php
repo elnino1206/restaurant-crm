@@ -17,6 +17,16 @@ class RestaurantPolicy
         return null;
     }
 
+    public function viewAny(User $user): bool
+    {
+        return $user->isSuperAdmin();
+    }
+
+    public function create(User $user): bool
+    {
+        return $user->isSuperAdmin();
+    }
+
     public function view(User $user, Restaurant $restaurant): bool
     {
         // restaurant_id check
