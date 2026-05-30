@@ -3,348 +3,402 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>Брони — {{ $restaurant['name'] ?? 'Dashboard' }}</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <style>
         [x-cloak] { display: none !important; }
-        .status-pending   { background:#FEF9EC; color:#B45309; border-color:#FDE68A; }
-        .status-confirmed { background:#EFF6FF; color:#1D4ED8; border-color:#BFDBFE; }
-        .status-completed { background:#F0FDF4; color:#15803D; border-color:#BBF7D0; }
-        .status-cancelled { background:#FEF2F2; color:#DC2626; border-color:#FECACA; }
-        .status-no_show   { background:#F3F4F6; color:#6B7280; border-color:#E5E7EB; }
+        .badge-pending   { @apply bg-yellow-50 text-yellow-700 border-yellow-200; }
+        .badge-confirmed { @apply bg-blue-50 text-blue-700 border-blue-200; }
+        .badge-completed { @apply bg-green-50 text-green-700 border-green-200; }
+        .badge-cancelled { @apply bg-red-50 text-red-600 border-red-200; }
+        .badge-no_show   { @apply bg-gray-100 text-gray-500 border-gray-200; }
     </style>
 </head>
-<body class="bg-gray-50 text-gray-800" x-data="dashboard()" x-init="init()">
+<body class="bg-gray-50 min-h-screen"
+      x-data="dashboard('{{ $apiBase }}', '{{ $token }}')"
+      x-init="init()">
 
-{{-- ══════════ HEADER ══════════ --}}
-<header class="bg-white border-b border-gray-200 sticky top-0 z-20">
-    <div class="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between gap-4">
-        <div class="flex items-center gap-3">
-            <span class="font-semibold text-base">{{ $restaurant['name'] ?? 'CRM' }}</span>
-            <span class="text-gray-300">|</span>
-            <a href="/admin/restaurants" class="text-sm text-gray-500 hover:text-gray-700">Настройки</a>
-            <a href="/book/{{ \App\Domains\Restaurant\Models\Restaurant::where('name', $restaurant['name'] ?? '')->value('slug') ?? 'test-restaurant' }}" target="_blank"
-               class="text-sm text-indigo-600 hover:text-indigo-800">Страница брони ↗</a>
+{{-- ═══════ HEADER ═══════ --}}
+<header class="bg-white border-b border-gray-100 sticky top-0 z-20 shadow-sm">
+    <div class="max-w-6xl mx-auto px-5 h-14 flex items-center justify-between">
+        <div class="flex items-center gap-4">
+            <span class="font-bold text-gray-900">{{ $restaurant['name'] ?? 'CRM' }}</span>
+            <span class="text-gray-200">|</span>
+            <nav class="flex gap-3 text-sm">
+                <a href="/admin/restaurants" class="text-gray-500 hover:text-gray-800">Настройки</a>
+                @php
+                    $slug = \App\Domains\Restaurant\Models\Restaurant::where('name', $restaurant['name'] ?? '')->value('slug') ?? 'test-restaurant';
+                @endphp
+                <a href="/book/{{ $slug }}" target="_blank" class="text-indigo-600 hover:text-indigo-800">Страница бронирования ↗</a>
+            </nav>
         </div>
-        <span class="text-sm text-gray-400">{{ now()->format('d.m.Y') }}</span>
+        <span class="text-xs text-gray-400">{{ now()->setTimezone($restaurant['timezone'] ?? 'UTC')->format('d.m.Y · H:i') }}</span>
     </div>
 </header>
 
-{{-- ══════════ DATE NAV ══════════ --}}
-<div class="bg-white border-b border-gray-200">
-    <div class="max-w-6xl mx-auto px-4 py-3 flex items-center gap-4">
-        <button @click="prevDay()" class="p-1.5 rounded hover:bg-gray-100 text-gray-500">
-            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
-        </button>
+{{-- ═══════ DATE NAV ═══════ --}}
+<div class="bg-white border-b border-gray-100">
+    <div class="max-w-6xl mx-auto px-5 py-3 flex flex-wrap items-center gap-3">
 
+        {{-- Arrows + input --}}
         <div class="flex items-center gap-2">
-            <input type="date" x-model="currentDate" @change="loadBookings()"
-                   class="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
-            <button @click="goToday()"
-                    :class="currentDate === todayStr ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'"
-                    class="px-3 py-1.5 rounded-lg text-sm font-medium transition">
-                Сегодня
+            <button @click="shiftDay(-1)" class="p-2 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-700 transition">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+            </button>
+            <input type="date" x-model="date" @change="reload()"
+                   class="border border-gray-300 rounded-lg px-3 py-1.5 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent">
+            <button @click="shiftDay(1)" class="p-2 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-700 transition">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
             </button>
         </div>
 
-        <button @click="nextDay()" class="p-1.5 rounded hover:bg-gray-100 text-gray-500">
-            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+        <button @click="goToday()"
+                :class="date === todayStr ? 'bg-indigo-600 text-white shadow-sm' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'"
+                class="px-4 py-1.5 rounded-lg text-sm font-medium transition">
+            Сегодня
         </button>
 
-        <span class="text-sm font-medium text-gray-700 ml-1" x-text="formatDate(currentDate)"></span>
+        <span class="text-sm font-medium text-gray-700" x-text="humanDate(date)"></span>
 
-        {{-- Stats --}}
-        <div class="ml-auto flex items-center gap-3 text-sm">
-            <span class="text-gray-500">Всего: <strong x-text="bookings.length"></strong></span>
-            <span class="text-yellow-600">Ожидают: <strong x-text="countByStatus('pending')"></strong></span>
-            <span class="text-blue-600">Подтв.: <strong x-text="countByStatus('confirmed')"></strong></span>
-            <span class="text-green-600">Завершены: <strong x-text="countByStatus('completed')"></strong></span>
+        {{-- Stats chips --}}
+        <div class="ml-auto flex flex-wrap gap-2 text-xs">
+            <span class="px-2.5 py-1 rounded-full bg-gray-100 text-gray-600 font-medium">
+                Всего: <span x-text="bookings.length" class="font-bold"></span>
+            </span>
+            <template x-if="count('pending') > 0">
+                <span class="px-2.5 py-1 rounded-full bg-yellow-50 text-yellow-700 border border-yellow-200 font-medium">
+                    Ожидают: <span x-text="count('pending')" class="font-bold"></span>
+                </span>
+            </template>
+            <template x-if="count('confirmed') > 0">
+                <span class="px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 border border-blue-200 font-medium">
+                    Подтв.: <span x-text="count('confirmed')" class="font-bold"></span>
+                </span>
+            </template>
+            <template x-if="count('completed') > 0">
+                <span class="px-2.5 py-1 rounded-full bg-green-50 text-green-700 border border-green-200 font-medium">
+                    Завершено: <span x-text="count('completed')" class="font-bold"></span>
+                </span>
+            </template>
         </div>
     </div>
 </div>
 
-{{-- ══════════ MAIN ══════════ --}}
-<div class="max-w-6xl mx-auto px-4 py-6">
+{{-- ═══════ BOOKINGS ═══════ --}}
+<main class="max-w-6xl mx-auto px-5 py-5">
 
     {{-- Loading --}}
-    <div x-show="loading" class="text-center py-16 text-gray-400">
-        <svg class="animate-spin w-6 h-6 mx-auto mb-3" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/></svg>
-        Загрузка…
+    <div x-show="loading" class="flex flex-col items-center justify-center py-20 text-gray-400 gap-3">
+        <svg class="animate-spin w-7 h-7" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+        </svg>
+        <span class="text-sm">Загружаем брони…</span>
     </div>
+
+    {{-- Error --}}
+    <div x-show="!loading && error"
+         class="bg-red-50 border border-red-200 text-red-600 rounded-xl px-4 py-3 text-sm mb-4"
+         x-text="error"></div>
 
     {{-- Empty --}}
-    <div x-show="!loading && bookings.length === 0" class="text-center py-16">
-        <div class="text-4xl mb-4">📅</div>
-        <p class="text-gray-500 text-lg">Бронирований на эту дату нет</p>
+    <div x-show="!loading && !error && bookings.length === 0"
+         class="flex flex-col items-center justify-center py-20 text-gray-400 gap-2">
+        <span class="text-5xl">📅</span>
+        <p class="text-base font-medium mt-2">Нет бронирований на эту дату</p>
+        <p class="text-sm">Выберите другую дату или <a href="/book/{{ $slug }}" class="text-indigo-500 hover:underline">создайте бронь</a></p>
     </div>
 
-    {{-- Bookings list --}}
-    <div x-show="!loading && bookings.length > 0" class="space-y-3">
+    {{-- List --}}
+    <div x-show="!loading && bookings.length > 0" class="space-y-2">
         <template x-for="b in bookings" :key="b.id">
-            <div class="bg-white rounded-xl border border-gray-200 overflow-hidden hover:border-gray-300 transition">
-                <div class="p-4 flex items-start gap-4">
+            <div class="bg-white rounded-xl border border-gray-200 hover:border-gray-300 transition-all"
+                 :class="{ 'opacity-60': ['cancelled','completed','no_show'].includes(b.status.value) }">
+                <div class="p-4 flex items-center gap-4">
 
-                    {{-- Time column --}}
-                    <div class="w-16 flex-shrink-0 text-center">
-                        <div class="text-lg font-bold text-gray-900" x-text="formatTime(b.booking_start)"></div>
-                        <div class="text-xs text-gray-400" x-text="formatTime(b.booking_end)"></div>
+                    {{-- Time --}}
+                    <div class="w-14 text-center flex-shrink-0">
+                        <p class="text-base font-bold text-gray-900 leading-none" x-text="hm(b.booking_start)"></p>
+                        <p class="text-xs text-gray-400 mt-0.5" x-text="hm(b.booking_end)"></p>
                     </div>
 
-                    {{-- Table + guests --}}
-                    <div class="w-20 flex-shrink-0 text-center">
-                        <div class="inline-flex items-center justify-center w-10 h-10 rounded-full bg-gray-100 text-sm font-semibold mx-auto"
-                             x-text="b.table ? '#' + b.table.number : '?'"></div>
-                        <div class="text-xs text-gray-400 mt-1" x-text="b.guests_count + ' гост.'"></div>
+                    {{-- Table badge --}}
+                    <div class="flex-shrink-0 w-11 h-11 rounded-full bg-gray-100 flex flex-col items-center justify-center text-xs">
+                        <span class="font-bold text-gray-800 text-sm" x-text="b.table ? b.table.number : '?'"></span>
+                        <span class="text-gray-400 leading-none" style="font-size:9px">стол</span>
                     </div>
 
-                    {{-- Customer info --}}
+                    {{-- Guests --}}
+                    <div class="w-8 text-center flex-shrink-0">
+                        <span class="text-sm font-semibold text-gray-700" x-text="b.guests_count"></span>
+                        <p class="text-gray-400 leading-none" style="font-size:9px">гост.</p>
+                    </div>
+
+                    {{-- Customer --}}
                     <div class="flex-1 min-w-0">
-                        <div class="font-medium truncate"
-                             x-text="b.customer ? b.customer.name : 'Без имени'"></div>
-                        <div class="text-sm text-gray-500" x-text="b.customer?.phone || '—'"></div>
-                        <div class="text-xs text-gray-400 mt-0.5" x-show="b.comment" x-text="b.comment"></div>
+                        <p class="font-medium text-gray-900 truncate leading-tight"
+                           x-text="b.customer?.name || '—'"></p>
+                        <p class="text-sm text-gray-500 leading-tight" x-text="b.customer?.phone || ''"></p>
+                        <p class="text-xs text-gray-400 mt-0.5 truncate" x-show="b.comment" x-text="b.comment"></p>
                     </div>
 
-                    {{-- Status badge --}}
+                    {{-- Status --}}
                     <div class="flex-shrink-0">
                         <span class="px-2.5 py-1 rounded-full text-xs font-medium border"
-                              :class="'status-' + b.status.value"
+                              :class="{
+                                  'bg-yellow-50 text-yellow-700 border-yellow-200': b.status.value === 'pending',
+                                  'bg-blue-50 text-blue-700 border-blue-200': b.status.value === 'confirmed',
+                                  'bg-green-50 text-green-700 border-green-200': b.status.value === 'completed',
+                                  'bg-red-50 text-red-600 border-red-200': b.status.value === 'cancelled',
+                                  'bg-gray-100 text-gray-500 border-gray-200': b.status.value === 'no_show',
+                              }"
                               x-text="b.status.label"></span>
                     </div>
 
-                    {{-- Table capacity --}}
-                    <div class="flex-shrink-0 text-right hidden sm:block">
-                        <div class="text-xs text-gray-400" x-show="b.table">
-                            вместимость <span x-text="b.table?.capacity"></span>
-                        </div>
-                        <div class="text-xs text-gray-300 mt-0.5" x-text="b.source?.label"></div>
+                    {{-- Source + capacity --}}
+                    <div class="hidden md:block text-right text-xs text-gray-400 flex-shrink-0 w-20">
+                        <span x-text="b.source?.label"></span>
+                        <br x-show="b.table">
+                        <span x-show="b.table" x-text="'до ' + b.table?.capacity + ' мест'"></span>
                     </div>
 
                     {{-- Actions --}}
-                    <div class="flex-shrink-0 flex items-center gap-1.5">
-                        {{-- Confirm --}}
+                    <div class="flex-shrink-0 flex items-center gap-1.5 flex-wrap justify-end">
                         <button x-show="b.status.value === 'pending'"
-                                @click="doAction(b, 'confirm')"
-                                class="px-3 py-1.5 text-xs font-medium bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
+                                @click="act(b, 'confirm')"
+                                class="btn-sm bg-blue-600 hover:bg-blue-700 text-white">
                             Подтвердить
                         </button>
-                        {{-- Complete --}}
                         <button x-show="b.status.value === 'confirmed'"
-                                @click="doAction(b, 'complete')"
-                                class="px-3 py-1.5 text-xs font-medium bg-green-600 text-white rounded-lg hover:bg-green-700 transition">
+                                @click="act(b, 'complete')"
+                                class="btn-sm bg-green-600 hover:bg-green-700 text-white">
                             Завершить
                         </button>
-                        {{-- No-show --}}
                         <button x-show="b.status.value === 'confirmed'"
-                                @click="doAction(b, 'no-show')"
-                                class="px-3 py-1.5 text-xs font-medium bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition">
+                                @click="act(b, 'no-show')"
+                                class="btn-sm bg-gray-500 hover:bg-gray-600 text-white">
                             Не явился
                         </button>
-                        {{-- Cancel --}}
                         <button x-show="['pending','confirmed'].includes(b.status.value)"
-                                @click="openCancel(b)"
-                                class="px-3 py-1.5 text-xs font-medium bg-red-50 text-red-600 border border-red-200 rounded-lg hover:bg-red-100 transition">
+                                @click="cancelOpen(b)"
+                                class="btn-sm bg-red-50 hover:bg-red-100 text-red-600 border border-red-200">
                             Отмена
                         </button>
-                        {{-- Edit --}}
                         <button x-show="['pending','confirmed'].includes(b.status.value)"
-                                @click="openEdit(b)"
-                                class="px-3 py-1.5 text-xs font-medium bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 transition">
+                                @click="editOpen(b)"
+                                class="btn-sm bg-gray-100 hover:bg-gray-200 text-gray-600">
                             ✏️
                         </button>
                     </div>
-
                 </div>
             </div>
         </template>
     </div>
+</main>
 
-</div>
-
-{{-- ══════════ CANCEL MODAL ══════════ --}}
-<div x-show="cancelModal.open" x-cloak
-     class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4"
-     @keydown.escape.window="cancelModal.open = false">
-    <div class="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6">
-        <h3 class="font-semibold text-lg mb-2">Отменить бронирование</h3>
-        <p class="text-sm text-gray-500 mb-4"
-           x-text="cancelModal.booking ? formatTime(cancelModal.booking.booking_start) + ' · ' + (cancelModal.booking.customer?.name || '—') : ''"></p>
-        <div class="mb-4">
-            <label class="block text-sm text-gray-600 mb-1.5">Причина (необязательно)</label>
-            <input type="text" x-model="cancelModal.reason" placeholder="Клиент сам отменил…"
-                   class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-400">
-        </div>
-        <div class="flex gap-2">
-            <button @click="confirmCancel()"
-                    class="flex-1 bg-red-600 text-white py-2 rounded-lg text-sm font-medium hover:bg-red-700 transition">
-                Отменить бронь
-            </button>
-            <button @click="cancelModal.open = false"
-                    class="px-4 py-2 rounded-lg text-sm text-gray-600 hover:bg-gray-100 transition">
-                Назад
-            </button>
+{{-- ═══════ CANCEL MODAL ═══════ --}}
+<template x-teleport="body">
+    <div x-show="cm.open" x-cloak
+         class="fixed inset-0 bg-black/40 flex items-end sm:items-center justify-center z-50 p-4"
+         @keydown.escape.window="cm.open = false" @click.self="cm.open = false">
+        <div class="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6">
+            <h3 class="font-semibold text-lg mb-1">Отменить бронирование</h3>
+            <p class="text-sm text-gray-500 mb-4"
+               x-text="cm.booking ? hm(cm.booking.booking_start) + ' · ' + (cm.booking.customer?.name || '—') : ''"></p>
+            <div class="mb-4">
+                <label class="block text-xs font-medium text-gray-500 mb-1.5">Причина (необязательно)</label>
+                <input x-model="cm.reason" type="text" placeholder="Клиент отменил…"
+                       class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-400">
+            </div>
+            <div class="flex gap-2">
+                <button @click="cancelConfirm()" :disabled="cm.loading"
+                        class="flex-1 bg-red-600 hover:bg-red-700 text-white py-2 rounded-lg text-sm font-medium transition disabled:opacity-40">
+                    <span x-show="!cm.loading">Отменить бронь</span>
+                    <span x-show="cm.loading">Отменяем…</span>
+                </button>
+                <button @click="cm.open = false"
+                        class="px-4 py-2 rounded-lg text-sm text-gray-600 hover:bg-gray-100 transition">
+                    Назад
+                </button>
+            </div>
         </div>
     </div>
-</div>
+</template>
 
-{{-- ══════════ EDIT MODAL ══════════ --}}
-<div x-show="editModal.open" x-cloak
-     class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4"
-     @keydown.escape.window="editModal.open = false">
-    <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
-        <h3 class="font-semibold text-lg mb-4">Изменить бронирование</h3>
+{{-- ═══════ EDIT MODAL ═══════ --}}
+<template x-teleport="body">
+    <div x-show="em.open" x-cloak
+         class="fixed inset-0 bg-black/40 flex items-end sm:items-center justify-center z-50 p-4"
+         @keydown.escape.window="em.open = false" @click.self="em.open = false">
+        <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
+            <h3 class="font-semibold text-lg mb-4">Изменить бронирование</h3>
 
-        <div class="error-msg bg-red-50 border border-red-200 text-red-600 rounded-lg px-3 py-2 text-sm mb-4"
-             x-show="editModal.error" x-text="editModal.error"></div>
+            <div x-show="em.error"
+                 class="bg-red-50 border border-red-200 text-red-600 rounded-lg px-3 py-2 text-sm mb-4"
+                 x-text="em.error"></div>
 
-        <div class="space-y-4">
-            <div class="grid grid-cols-2 gap-4">
-                <div>
-                    <label class="block text-xs font-medium text-gray-500 mb-1.5">Дата</label>
-                    <input type="date" x-model="editModal.date"
-                           class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            <div class="space-y-4">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-medium text-gray-500 mb-1.5">Дата</label>
+                        <input type="date" x-model="em.date"
+                               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-500 mb-1.5">Начало</label>
+                        <input type="time" x-model="em.time"
+                               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    </div>
                 </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-medium text-gray-500 mb-1.5">Гостей</label>
+                        <input type="number" x-model.number="em.guests" min="1" max="50"
+                               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-500 mb-1.5">Стол</label>
+                        <select x-model="em.table_id"
+                                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                            <option value="">Авто</option>
+                            @foreach(collect($floors)->flatMap(fn($f) => $f['tables'] ?? []) as $table)
+                                <option value="{{ $table['id'] }}">Стол {{ $table['number'] }} (до {{ $table['capacity'] }} чел.)</option>
+                            @endforeach
+                        </select>
+                    </div>
+                </div>
+
                 <div>
-                    <label class="block text-xs font-medium text-gray-500 mb-1.5">Время</label>
-                    <input type="time" x-model="editModal.time"
+                    <label class="block text-xs font-medium text-gray-500 mb-1.5">Комментарий</label>
+                    <input type="text" x-model="em.comment" placeholder="Особые пожелания…"
                            class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
                 </div>
             </div>
 
-            <div class="grid grid-cols-2 gap-4">
-                <div>
-                    <label class="block text-xs font-medium text-gray-500 mb-1.5">Гостей</label>
-                    <input type="number" x-model="editModal.guests" min="1" max="50"
-                           class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                </div>
-                <div>
-                    <label class="block text-xs font-medium text-gray-500 mb-1.5">Стол</label>
-                    <select x-model="editModal.table_id"
-                            class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                        <option value="">Авто</option>
-                        @foreach(collect($floors)->flatMap(fn($f) => $f['tables'] ?? []) as $table)
-                            <option value="{{ $table['id'] }}">Стол {{ $table['number'] }} ({{ $table['capacity'] }} чел.)</option>
-                        @endforeach
-                    </select>
-                </div>
+            <div class="flex gap-2 mt-5">
+                <button @click="editSave()" :disabled="em.saving"
+                        class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white py-2 rounded-lg text-sm font-medium transition disabled:opacity-40">
+                    <span x-show="!em.saving">Сохранить</span>
+                    <span x-show="em.saving">Сохраняем…</span>
+                </button>
+                <button @click="em.open = false"
+                        class="px-4 py-2 rounded-lg text-sm text-gray-600 hover:bg-gray-100 transition">
+                    Отмена
+                </button>
             </div>
-
-            <div>
-                <label class="block text-xs font-medium text-gray-500 mb-1.5">Комментарий</label>
-                <input type="text" x-model="editModal.comment" placeholder="Особые пожелания…"
-                       class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
-            </div>
-        </div>
-
-        <div class="flex gap-2 mt-5">
-            <button @click="saveEdit()" :disabled="editModal.saving"
-                    class="flex-1 bg-indigo-600 text-white py-2 rounded-lg text-sm font-medium hover:bg-indigo-700 transition disabled:opacity-40">
-                <span x-show="!editModal.saving">Сохранить</span>
-                <span x-show="editModal.saving">Сохраняем…</span>
-            </button>
-            <button @click="editModal.open = false"
-                    class="px-4 py-2 rounded-lg text-sm text-gray-600 hover:bg-gray-100 transition">
-                Отмена
-            </button>
         </div>
     </div>
-</div>
+</template>
+
+<style>
+    .btn-sm { @apply px-3 py-1.5 text-xs font-medium rounded-lg transition; }
+</style>
 
 <script>
-const CSRF = document.querySelector('meta[name=csrf-token]').content;
-
-function dashboard() {
+function dashboard(apiBase, token) {
     const today = new Date().toISOString().slice(0, 10);
 
+    const apiFetch = (path, opts = {}) =>
+        fetch(apiBase + path, {
+            ...opts,
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'Authorization': `Bearer ${token}`,
+                ...(opts.headers || {}),
+            },
+            body: opts.body ? JSON.stringify(opts.body) : undefined,
+        });
+
     return {
-        currentDate: '{{ $date }}',
-        todayStr:    today,
-        bookings:    @json($bookings),
-        loading:     false,
+        apiBase, token,
+        date:     today,
+        todayStr: today,
+        bookings: [],
+        loading:  false,
+        error:    null,
 
-        cancelModal: { open: false, booking: null, reason: '' },
-        editModal:   { open: false, booking: null, date: '', time: '', guests: 2,
-                       table_id: '', comment: '', saving: false, error: null },
+        // Cancel modal
+        cm: { open: false, booking: null, reason: '', loading: false },
+        // Edit modal
+        em: { open: false, booking: null, date: '', time: '', guests: 2,
+              table_id: '', comment: '', saving: false, error: null },
 
-        init() {},
+        // ── Lifecycle ──────────────────────────────────────────────
 
-        // ── Date navigation ─────────────────────────────────
-
-        prevDay() {
-            const d = new Date(this.currentDate + 'T00:00:00');
-            d.setDate(d.getDate() - 1);
-            this.currentDate = d.toISOString().slice(0, 10);
-            this.loadBookings();
-        },
-        nextDay() {
-            const d = new Date(this.currentDate + 'T00:00:00');
-            d.setDate(d.getDate() + 1);
-            this.currentDate = d.toISOString().slice(0, 10);
-            this.loadBookings();
-        },
-        goToday() {
-            this.currentDate = this.todayStr;
-            this.loadBookings();
+        init() {
+            this.reload();
         },
 
-        async loadBookings() {
+        // ── Load bookings ──────────────────────────────────────────
+
+        async reload() {
             this.loading = true;
+            this.error   = null;
             try {
-                const r = await fetch('/dashboard/bookings', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': CSRF },
-                    body: JSON.stringify({ date: this.currentDate }),
-                });
-                const data = await r.json();
-                this.bookings = data.bookings || [];
+                const r    = await apiFetch(`/bookings?date=${this.date}`);
+                const json = await r.json();
+                if (!r.ok) throw new Error(json.message || 'Ошибка загрузки');
+                this.bookings = json.data || [];
+            } catch (e) {
+                this.error    = e.message;
+                this.bookings = [];
             } finally {
                 this.loading = false;
             }
         },
 
-        // ── Actions ─────────────────────────────────────────
+        // ── Date navigation ────────────────────────────────────────
 
-        async doAction(booking, action) {
-            const r = await fetch(`/dashboard/bookings/${booking.id}/${action}`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': CSRF },
-                body: JSON.stringify({}),
-            });
-            const data = await r.json();
-            if (r.ok && data.data) {
-                const idx = this.bookings.findIndex(b => b.id === booking.id);
-                if (idx !== -1) this.bookings[idx] = data.data;
+        shiftDay(delta) {
+            const d = new Date(this.date + 'T00:00:00');
+            d.setDate(d.getDate() + delta);
+            this.date = d.toISOString().slice(0, 10);
+            this.reload();
+        },
+        goToday() {
+            this.date = this.todayStr;
+            this.reload();
+        },
+
+        // ── Status actions ─────────────────────────────────────────
+
+        async act(booking, action) {
+            const r    = await apiFetch(`/bookings/${booking.id}/${action}`, { method: 'POST' });
+            const json = await r.json();
+            if (r.ok && json.data) this.replaceBooking(json.data);
+        },
+
+        cancelOpen(booking) {
+            this.cm = { open: true, booking, reason: '', loading: false };
+        },
+        async cancelConfirm() {
+            this.cm.loading = true;
+            try {
+                const r    = await apiFetch(`/bookings/${this.cm.booking.id}/cancel`, {
+                    method: 'POST',
+                    body:   { reason: this.cm.reason },
+                });
+                const json = await r.json();
+                if (r.ok && json.data) this.replaceBooking(json.data);
+                this.cm.open = false;
+            } finally {
+                this.cm.loading = false;
             }
         },
 
-        openCancel(booking) {
-            this.cancelModal = { open: true, booking, reason: '' };
-        },
-        async confirmCancel() {
-            const b = this.cancelModal.booking;
-            const r = await fetch(`/dashboard/bookings/${b.id}/cancel`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': CSRF },
-                body: JSON.stringify({ reason: this.cancelModal.reason }),
-            });
-            const data = await r.json();
-            if (r.ok && data.data) {
-                const idx = this.bookings.findIndex(x => x.id === b.id);
-                if (idx !== -1) this.bookings[idx] = data.data;
-            }
-            this.cancelModal.open = false;
-        },
+        // ── Edit ───────────────────────────────────────────────────
 
-        openEdit(booking) {
-            const start = new Date(booking.booking_start);
+        editOpen(booking) {
+            const s   = new Date(booking.booking_start);
             const pad = n => String(n).padStart(2, '0');
-            this.editModal = {
+            this.em = {
                 open:     true,
                 booking,
-                date:     start.toISOString().slice(0, 10),
-                time:     pad(start.getHours()) + ':' + pad(start.getMinutes()),
+                date:     s.toISOString().slice(0, 10),
+                time:     pad(s.getHours()) + ':' + pad(s.getMinutes()),
                 guests:   booking.guests_count,
                 table_id: booking.table?.id || '',
                 comment:  booking.comment || '',
@@ -352,69 +406,57 @@ function dashboard() {
                 error:    null,
             };
         },
-        async saveEdit() {
-            this.editModal.saving = true;
-            this.editModal.error  = null;
+        async editSave() {
+            this.em.saving = true;
+            this.em.error  = null;
             try {
-                const b    = this.editModal;
-                const startDt = b.date + 'T' + b.time + ':00';
-                const endDate = new Date(new Date(startDt).getTime() + 120 * 60000);
+                const e  = this.em;
                 const pad = n => String(n).padStart(2, '0');
-                const endDt = endDate.getFullYear() + '-' +
-                    pad(endDate.getMonth() + 1) + '-' +
-                    pad(endDate.getDate()) + 'T' +
-                    pad(endDate.getHours()) + ':' +
-                    pad(endDate.getMinutes()) + ':00';
+                const start = new Date(`${e.date}T${e.time}:00`);
+                const end   = new Date(start.getTime() + 120 * 60_000);
+                const fmtDt = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}:00`;
 
-                const payload = {
-                    guests_count:  parseInt(b.guests),
-                    booking_start: startDt,
-                    booking_end:   endDt,
-                    comment:       b.comment || null,
+                const body = {
+                    guests_count:  e.guests,
+                    booking_start: fmtDt(start),
+                    booking_end:   fmtDt(end),
+                    comment:       e.comment || null,
                 };
-                if (b.table_id) payload.table_id = b.table_id;
+                if (e.table_id) body.table_id = e.table_id;
 
-                const r = await fetch(`/dashboard/bookings/${b.booking.id}`, {
-                    method: 'PATCH',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': CSRF,
-                    },
-                    body: JSON.stringify(payload),
-                });
-                const data = await r.json();
-                if (!r.ok) {
-                    this.editModal.error = data.message || 'Ошибка сохранения.';
-                    return;
-                }
-                if (data.data) {
-                    const idx = this.bookings.findIndex(x => x.id === b.booking.id);
-                    if (idx !== -1) this.bookings[idx] = data.data;
-                }
-                this.editModal.open = false;
+                const r    = await apiFetch(`/bookings/${e.booking.id}`, { method: 'PATCH', body });
+                const json = await r.json();
+
+                if (!r.ok) { this.em.error = json.message || 'Ошибка сохранения'; return; }
+                if (json.data) this.replaceBooking(json.data);
+                this.em.open = false;
             } finally {
-                this.editModal.saving = false;
+                this.em.saving = false;
             }
         },
 
-        // ── Helpers ─────────────────────────────────────────
+        // ── Helpers ────────────────────────────────────────────────
 
-        countByStatus(status) {
+        replaceBooking(updated) {
+            const i = this.bookings.findIndex(b => b.id === updated.id);
+            if (i !== -1) this.bookings[i] = updated;
+        },
+
+        count(status) {
             return this.bookings.filter(b => b.status.value === status).length;
         },
 
-        formatTime(iso) {
+        hm(iso) {
             if (!iso) return '—';
             const d = new Date(iso);
-            return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+            return String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
         },
 
-        formatDate(dateStr) {
-            if (!dateStr) return '';
-            const d = new Date(dateStr + 'T00:00:00');
+        humanDate(str) {
+            const d = new Date(str + 'T00:00:00');
             const days   = ['воскресенье','понедельник','вторник','среда','четверг','пятница','суббота'];
             const months = ['янв','фев','мар','апр','май','июн','июл','авг','сен','окт','ноя','дек'];
-            return d.getDate() + ' ' + months[d.getMonth()] + ', ' + days[d.getDay()];
+            return `${d.getDate()} ${months[d.getMonth()]}, ${days[d.getDay()]}`;
         },
     };
 }

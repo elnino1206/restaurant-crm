@@ -10,9 +10,6 @@ Route::get('/', function () {
 });
 
 Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
-Route::post('/dashboard/bookings', [DashboardController::class, 'fetchBookings'])->name('dashboard.bookings');
-Route::post('/dashboard/bookings/{booking}/{action}', [DashboardController::class, 'action'])->name('dashboard.action');
-Route::patch('/dashboard/bookings/{booking}', [DashboardController::class, 'update'])->name('dashboard.update');
 
 // Public booking page
 Route::get('/book/{slug}', [BookingPageController::class, 'show'])->name('booking.show');
