@@ -12,7 +12,7 @@ class BookingResource extends ApiResource
         return [
             'id' => $this->id,
             'status' => [
-                'value' => $this->status->value,
+                'value' => $this->status->getMorphClass(),
                 'label' => $this->status->label(),
             ],
             'source' => [
