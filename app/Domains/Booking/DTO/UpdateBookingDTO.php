@@ -11,6 +11,7 @@ class UpdateBookingDTO extends Data
         public readonly ?int $guestsCount = null,
         public readonly ?Carbon $bookingStart = null,
         public readonly ?Carbon $bookingEnd = null,
+        public readonly bool $clearBookingEnd = false,
         public readonly ?string $tableId = null,
         public readonly ?string $comment = null,
     ) {}

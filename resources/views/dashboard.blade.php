@@ -33,7 +33,13 @@
                 <a href="/book/{{ $slug }}" target="_blank" class="text-indigo-600 hover:text-indigo-800">Страница бронирования ↗</a>
             </nav>
         </div>
-        <span class="text-xs text-gray-400">{{ now()->setTimezone($restaurant['timezone'] ?? 'UTC')->format('d.m.Y · H:i') }}</span>
+        <div class="flex items-center gap-3">
+            <span class="text-xs text-gray-400">{{ now()->setTimezone($restaurant['timezone'] ?? 'UTC')->format('d.m.Y · H:i') }}</span>
+            <button @click="createOpen()"
+                    class="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium px-4 py-1.5 rounded-lg transition">
+                + Бронь
+            </button>
+        </div>
     </div>
 </header>
 
@@ -252,6 +258,18 @@
                     </div>
                 </div>
 
+                <div>
+                    <label class="block text-xs font-medium text-gray-500 mb-1.5">Длина брони</label>
+                    <div class="flex items-center gap-3">
+                        <input type="time" x-model="em.end_time" :disabled="em.open_ended"
+                               class="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-40 disabled:bg-gray-50">
+                        <label class="flex items-center gap-2 text-sm text-gray-600 cursor-pointer whitespace-nowrap">
+                            <input type="checkbox" x-model="em.open_ended" class="rounded">
+                            До закрытия
+                        </label>
+                    </div>
+                </div>
+
                 <div class="grid grid-cols-2 gap-4">
                     <div>
                         <label class="block text-xs font-medium text-gray-500 mb-1.5">Гостей</label>
@@ -292,6 +310,97 @@
     </div>
 </template>
 
+{{-- CREATE MODAL --}}
+<template x-teleport="body">
+    <div x-show="nm.open" x-cloak
+         class="fixed inset-0 bg-black/40 flex items-end sm:items-center justify-center z-50 p-4"
+         @keydown.escape.window="nm.open = false" @click.self="nm.open = false">
+        <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
+            <h3 class="font-semibold text-lg mb-4">Новое бронирование</h3>
+
+            <div x-show="nm.error"
+                 class="bg-red-50 border border-red-200 text-red-600 rounded-lg px-3 py-2 text-sm mb-4"
+                 x-text="nm.error"></div>
+
+            <div class="space-y-4">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-medium text-gray-500 mb-1.5">Дата</label>
+                        <input type="date" x-model="nm.date"
+                               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-500 mb-1.5">Начало</label>
+                        <input type="time" x-model="nm.time"
+                               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-medium text-gray-500 mb-1.5">Длина брони</label>
+                    <div class="flex items-center gap-3">
+                        <input type="time" x-model="nm.end_time" :disabled="nm.open_ended"
+                               class="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-40 disabled:bg-gray-50">
+                        <label class="flex items-center gap-2 text-sm text-gray-600 cursor-pointer whitespace-nowrap">
+                            <input type="checkbox" x-model="nm.open_ended" class="rounded">
+                            До закрытия
+                        </label>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-medium text-gray-500 mb-1.5">Гостей</label>
+                        <input type="number" x-model.number="nm.guests" min="1" max="50"
+                               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-500 mb-1.5">Стол</label>
+                        <select x-model="nm.table_id"
+                                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                            <option value="">Авто</option>
+                            @foreach(collect($floors)->flatMap(fn($f) => $f['tables'] ?? []) as $table)
+                                <option value="{{ $table['id'] }}">Стол {{ $table['number'] }} (до {{ $table['capacity'] }} чел.)</option>
+                            @endforeach
+                        </select>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-medium text-gray-500 mb-1.5">Имя гостя</label>
+                        <input type="text" x-model="nm.name" placeholder="Иван"
+                               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-500 mb-1.5">Телефон</label>
+                        <input type="tel" x-model="nm.phone" placeholder="+7 900 000-00-00"
+                               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-medium text-gray-500 mb-1.5">Комментарий</label>
+                    <input type="text" x-model="nm.comment" placeholder="Особые пожелания…"
+                           class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+            </div>
+
+            <div class="flex gap-2 mt-5">
+                <button @click="createSave()" :disabled="nm.saving || !nm.time || !nm.date"
+                        class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white py-2 rounded-lg text-sm font-medium transition disabled:opacity-40">
+                    <span x-show="!nm.saving">Создать</span>
+                    <span x-show="nm.saving">Создаём…</span>
+                </button>
+                <button @click="nm.open = false"
+                        class="px-4 py-2 rounded-lg text-sm text-gray-600 hover:bg-gray-100 transition">
+                    Отмена
+                </button>
+            </div>
+        </div>
+    </div>
+</template>
+
 <style>
     .btn-sm { @apply px-3 py-1.5 text-xs font-medium rounded-lg transition; }
 </style>
@@ -300,6 +409,18 @@
 function dashboard(apiBase, token, tz) {
     // Дата YYYY-MM-DD в timezone ресторана
     const todayInTz = () => new Date().toLocaleDateString('en-CA', { timeZone: tz });
+
+    // Время HH:MM в timezone ресторана для Date-объекта
+    const timeInTz = (d) => d.toLocaleTimeString('en-GB', {
+        timeZone: tz, hour: '2-digit', minute: '2-digit', hour12: false,
+    });
+
+    // Дата YYYY-MM-DD в timezone ресторана для Date-объекта
+    const dateInTz = (d) => d.toLocaleDateString('en-CA', { timeZone: tz });
+
+    // Строит наивный ISO-datetime (без TZ), который сервер парсит в restaurant timezone
+    // date = "YYYY-MM-DD", time = "HH:MM" — оба в restaurant timezone
+    const naiveDt = (date, time) => `${date}T${time}:00`;
 
     const apiFetch = (path, opts = {}) =>
         fetch(apiBase + path, {
@@ -313,6 +434,15 @@ function dashboard(apiBase, token, tz) {
             body: opts.body ? JSON.stringify(opts.body) : undefined,
         });
 
+    // Добавляет 2 часа к "HH:MM" строке (в рамках одного дня, без даты)
+    const addHours = (timeStr, hours) => {
+        const [h, m] = timeStr.split(':').map(Number);
+        const total  = h * 60 + m + hours * 60;
+        const hh = String(Math.floor(total / 60) % 24).padStart(2, '0');
+        const mm = String(total % 60).padStart(2, '0');
+        return `${hh}:${mm}`;
+    };
+
     return {
         apiBase, token, tz,
         date:     todayInTz(),
@@ -324,8 +454,13 @@ function dashboard(apiBase, token, tz) {
         // Cancel modal
         cm: { open: false, booking: null, reason: '', loading: false },
         // Edit modal
-        em: { open: false, booking: null, date: '', time: '', guests: 2,
-              table_id: '', comment: '', saving: false, error: null },
+        em: { open: false, booking: null, date: '', time: '', end_time: '',
+              open_ended: false, guests: 2, table_id: '', comment: '',
+              saving: false, error: null },
+        // New booking modal
+        nm: { open: false, date: '', time: '', end_time: '', open_ended: false,
+              guests: 2, table_id: '', name: '', phone: '', comment: '',
+              saving: false, error: null },
 
         // ── Lifecycle ──────────────────────────────────────────────
 
@@ -354,7 +489,6 @@ function dashboard(apiBase, token, tz) {
         // ── Date navigation ────────────────────────────────────────
 
         shiftDay(delta) {
-            // Используем noon чтобы избежать DST-прыжков
             const d = new Date(this.date + 'T12:00:00');
             d.setDate(d.getDate() + delta);
             this.date = d.toLocaleDateString('en-CA', { timeZone: this.tz });
@@ -394,34 +528,36 @@ function dashboard(apiBase, token, tz) {
         // ── Edit ───────────────────────────────────────────────────
 
         editOpen(booking) {
-            const s   = new Date(booking.booking_start);
-            const pad = n => String(n).padStart(2, '0');
+            const s = new Date(booking.booking_start);
+            const startTime = timeInTz(s);
+            const isOpenEnded = !booking.booking_end;
+            const endTime = booking.booking_end
+                ? timeInTz(new Date(booking.booking_end))
+                : addHours(startTime, 2);
+
             this.em = {
-                open:     true,
+                open:       true,
                 booking,
-                date:     s.toISOString().slice(0, 10),
-                time:     pad(s.getHours()) + ':' + pad(s.getMinutes()),
-                guests:   booking.guests_count,
-                table_id: booking.table?.id || '',
-                comment:  booking.comment || '',
-                saving:   false,
-                error:    null,
+                date:       dateInTz(s),
+                time:       startTime,
+                end_time:   endTime,
+                open_ended: isOpenEnded,
+                guests:     booking.guests_count,
+                table_id:   booking.table?.id || '',
+                comment:    booking.comment || '',
+                saving:     false,
+                error:      null,
             };
         },
         async editSave() {
             this.em.saving = true;
             this.em.error  = null;
             try {
-                const e  = this.em;
-                const pad = n => String(n).padStart(2, '0');
-                const start = new Date(`${e.date}T${e.time}:00`);
-                const end   = new Date(start.getTime() + 120 * 60_000);
-                const fmtDt = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}:00`;
-
+                const e = this.em;
                 const body = {
                     guests_count:  e.guests,
-                    booking_start: fmtDt(start),
-                    booking_end:   fmtDt(end),
+                    booking_start: naiveDt(e.date, e.time),
+                    booking_end:   e.open_ended ? null : naiveDt(e.date, e.end_time),
                     comment:       e.comment || null,
                 };
                 if (e.table_id) body.table_id = e.table_id;
@@ -437,6 +573,54 @@ function dashboard(apiBase, token, tz) {
             }
         },
 
+        // ── Create booking ─────────────────────────────────────────
+
+        createOpen() {
+            const now = new Date();
+            const curTime = timeInTz(now);
+            const defEndTime = addHours(curTime, 2);
+            this.nm = {
+                open:       true,
+                date:       this.date,
+                time:       curTime,
+                end_time:   defEndTime,
+                open_ended: false,
+                guests:     2,
+                table_id:   '',
+                name:       '',
+                phone:      '',
+                comment:    '',
+                saving:     false,
+                error:      null,
+            };
+        },
+        async createSave() {
+            this.nm.saving = true;
+            this.nm.error  = null;
+            try {
+                const n = this.nm;
+                const body = {
+                    guests_count:  n.guests,
+                    booking_start: naiveDt(n.date, n.time),
+                    booking_end:   n.open_ended ? null : naiveDt(n.date, n.end_time),
+                    comment:       n.comment || null,
+                    source:        'web',
+                };
+                if (n.table_id) body.table_id = n.table_id;
+                if (n.phone)    body.customer_phone = n.phone;
+                if (n.name)     body.customer_name  = n.name;
+
+                const r    = await apiFetch('/bookings', { method: 'POST', body });
+                const json = await r.json();
+
+                if (!r.ok) { this.nm.error = json.message || 'Ошибка создания'; return; }
+                this.nm.open = false;
+                this.reload();
+            } finally {
+                this.nm.saving = false;
+            }
+        },
+
         // ── Helpers ────────────────────────────────────────────────
 
         replaceBooking(updated) {
@@ -449,8 +633,7 @@ function dashboard(apiBase, token, tz) {
         },
 
         hm(iso) {
-            if (!iso) return '—';
-            // Показываем время в timezone ресторана, а не браузера
+            if (!iso) return '∞';
             return new Date(iso).toLocaleTimeString('ru-RU', {
                 timeZone: this.tz,
                 hour: '2-digit',
@@ -460,7 +643,6 @@ function dashboard(apiBase, token, tz) {
         },
 
         humanDate(str) {
-            // Noon чтобы парсинг не сдвинул дату при часовых поясах
             const d = new Date(str + 'T12:00:00');
             const days   = ['воскресенье','понедельник','вторник','среда','четверг','пятница','суббота'];
             const months = ['янв','фев','мар','апр','май','июн','июл','авг','сен','окт','ноя','дек'];

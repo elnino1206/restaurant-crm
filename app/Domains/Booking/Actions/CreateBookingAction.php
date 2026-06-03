@@ -15,35 +15,53 @@ class CreateBookingAction
 {
     public function handle(CreateBookingDTO $dto): Booking
     {
-        $tableId = $dto->tableId ?? $this->allocateTable($dto)->id;
+        $excludeTableIds = [];
+        $maxAttempts = 3;
 
-        try {
-            $booking = Booking::create([
-                'restaurant_id' => $dto->restaurantId,
-                'table_id' => $tableId,
-                'customer_id' => $dto->customerId,
-                'created_by' => $dto->createdBy,
-                'guests_count' => $dto->guestsCount,
-                'booking_start' => $dto->bookingStart,
-                'booking_end' => $dto->bookingEnd,
-                'comment' => $dto->comment,
-                'source' => $dto->source,
-            ]);
-        } catch (QueryException $e) {
-            // PostgreSQL exclusion constraint: SQLSTATE 23P01
-            if (str_contains($e->getMessage(), 'no_overlapping_bookings')) {
-                throw BookingConflictException::forTable($tableId, $dto->bookingStart);
+        for ($attempt = 0; $attempt < $maxAttempts; $attempt++) {
+            $tableId = $dto->tableId ?? $this->allocateTable($dto, $excludeTableIds)->id;
+
+            try {
+                $booking = Booking::create([
+                    'restaurant_id' => $dto->restaurantId,
+                    'table_id' => $tableId,
+                    'customer_id' => $dto->customerId,
+                    'created_by' => $dto->createdBy,
+                    'guests_count' => $dto->guestsCount,
+                    'booking_start' => $dto->bookingStart,
+                    'booking_end' => $dto->bookingEnd,
+                    'comment' => $dto->comment,
+                    'source' => $dto->source,
+                ]);
+
+                event(new BookingCreatedEvent($booking->id, $booking->restaurant_id));
+
+                return $booking;
+            } catch (QueryException $e) {
+                // SQLSTATE 23P01 — PostgreSQL exclusion constraint violation
+                if ($e->getCode() !== '23P01') {
+                    throw $e;
+                }
+
+                if ($dto->tableId !== null) {
+                    throw BookingConflictException::forTable($tableId, $dto->bookingStart);
+                }
+
+                $excludeTableIds[] = $tableId;
             }
-
-            throw $e;
         }
 
-        event(new BookingCreatedEvent($booking->id, $booking->restaurant_id));
-
-        return $booking;
+        throw NoTablesAvailableException::forRequest(
+            AllocateTableDTO::from([
+                'restaurantId' => $dto->restaurantId,
+                'guestsCount' => $dto->guestsCount,
+                'bookingStart' => $dto->bookingStart,
+                'bookingEnd' => $dto->bookingEnd,
+            ])
+        );
     }
 
-    private function allocateTable(CreateBookingDTO $dto): Table
+    private function allocateTable(CreateBookingDTO $dto, array $excludeTableIds = []): Table
     {
         return app(TableAllocator::class)->allocate(
             AllocateTableDTO::from([
@@ -51,6 +69,7 @@ class CreateBookingAction
                 'guestsCount' => $dto->guestsCount,
                 'bookingStart' => $dto->bookingStart,
                 'bookingEnd' => $dto->bookingEnd,
+                'excludeTableIds' => $excludeTableIds,
             ])
         );
     }

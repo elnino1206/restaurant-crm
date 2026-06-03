@@ -21,7 +21,7 @@ class RestaurantController extends Controller
      */
     public function show(): JsonResponse
     {
-        $restaurant = Restaurant::findOrFail(auth()->user()->restaurant_id);
+        $restaurant = $this->currentRestaurant();
 
         $this->authorize('view', $restaurant);
 
@@ -33,7 +33,7 @@ class RestaurantController extends Controller
      */
     public function update(UpdateRestaurantRequest $request): JsonResponse
     {
-        $restaurant = Restaurant::findOrFail(auth()->user()->restaurant_id);
+        $restaurant = $this->currentRestaurant();
 
         $this->authorize('update', $restaurant);
 
@@ -56,7 +56,7 @@ class RestaurantController extends Controller
      */
     public function floors(): AnonymousResourceCollection
     {
-        $restaurant = Restaurant::findOrFail(auth()->user()->restaurant_id);
+        $restaurant = $this->currentRestaurant();
 
         $this->authorize('view', $restaurant);
 
@@ -70,13 +70,26 @@ class RestaurantController extends Controller
      */
     public function timeSlotConfigs(): AnonymousResourceCollection
     {
-        $restaurant = Restaurant::findOrFail(auth()->user()->restaurant_id);
+        $restaurant = $this->currentRestaurant();
 
         $this->authorize('view', $restaurant);
 
         return TimeSlotConfigResource::collection(
             TimeSlotConfig::orderBy('day_of_week')->get()
         );
+    }
+
+    private function currentRestaurant(): Restaurant
+    {
+        $restaurantId = auth()->user()?->restaurant_id;
+
+        abort_if(
+            $restaurantId === null,
+            403,
+            'Этот эндпоинт доступен только для owner/manager с привязанным рестораном.'
+        );
+
+        return Restaurant::findOrFail($restaurantId);
     }
 
     // ─── super_admin: управление всеми ресторанами ───────────────────────────

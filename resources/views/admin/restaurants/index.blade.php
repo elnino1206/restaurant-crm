@@ -35,6 +35,7 @@
             <thead class="bg-gray-50 border-b">
                 <tr class="text-left text-xs text-gray-500 uppercase tracking-wide">
                     <th class="px-5 py-3">Название</th>
+                    <th class="px-5 py-3">ID</th>
                     <th class="px-5 py-3">Slug</th>
                     <th class="px-5 py-3">Timezone</th>
                     <th class="px-5 py-3">Телефон</th>
@@ -46,6 +47,7 @@
                 @foreach($restaurants as $r)
                 <tr class="border-t hover:bg-gray-50">
                     <td class="px-5 py-3 font-medium">{{ $r['name'] }}</td>
+                    <td class="px-5 py-3 text-gray-400 font-mono text-xs">{{ $r['id'] }}</td>
                     <td class="px-5 py-3 text-gray-500 font-mono text-xs">{{ $r['slug'] }}</td>
                     <td class="px-5 py-3 text-gray-500">{{ $r['timezone'] }}</td>
                     <td class="px-5 py-3 text-gray-500">{{ $r['phone'] ?? '—' }}</td>

@@ -17,14 +17,24 @@ class TableAllocator
             ->where('min_capacity', '<=', $dto->guestsCount)
             ->whereNull('deleted_at')
             ->whereDoesntHave('bookings', function ($q) use ($dto) {
+                // For open-ended bookings use end-of-day so future days aren't blocked
+                $endBound = $dto->bookingEnd ?? $dto->bookingStart->copy()->endOfDay();
+
                 $q->whereIn('status', ['pending', 'confirmed'])
-                    ->where('booking_start', '<', $dto->bookingEnd)
-                    ->where('booking_end', '>', $dto->bookingStart);
+                    ->where('booking_start', '<', $endBound)
+                    ->where(function ($sq) use ($dto) {
+                        $sq->whereNull('booking_end')
+                            ->orWhere('booking_end', '>', $dto->bookingStart);
+                    });
             })
             ->orderBy('capacity');
 
         if ($dto->preferredTableId) {
             $query->where('id', $dto->preferredTableId);
+        }
+
+        if ($dto->excludeTableIds !== []) {
+            $query->whereNotIn('id', $dto->excludeTableIds);
         }
 
         $table = $query->first();

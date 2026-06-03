@@ -1,4 +1,4 @@
-<?php
+    <?php
 
 use App\Http\Controllers\BookingPageController;
 use App\Http\Controllers\DashboardController;
@@ -35,4 +35,8 @@ Route::prefix('admin')->name('admin.')->group(function () {
     Route::post('restaurants/{restaurant}/floors/{floor}/tables', [RestaurantAdminController::class, 'storeTable'])->name('restaurants.tables.store');
     Route::put('restaurants/{restaurant}/tables/{table}', [RestaurantAdminController::class, 'updateTable'])->name('restaurants.tables.update');
     Route::delete('restaurants/{restaurant}/tables/{table}', [RestaurantAdminController::class, 'destroyTable'])->name('restaurants.tables.destroy');
+
+    // Users
+    Route::post('restaurants/{restaurant}/users', [RestaurantAdminController::class, 'storeUser'])->name('restaurants.users.store');
+    Route::delete('restaurants/{restaurant}/users/{user}', [RestaurantAdminController::class, 'destroyUser'])->name('restaurants.users.destroy');
 });

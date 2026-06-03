@@ -409,6 +409,7 @@
                             <option value="90">1.5 часа</option>
                             <option value="120">2 часа</option>
                             <option value="180">3 часа</option>
+                            <option value="0">До закрытия</option>
                         </select>
                     </div>
                     <div class="flex gap-2">
@@ -474,11 +475,12 @@
                                 <td class="px-5 py-3">
                                     <select :name="`days[${day.day_of_week}][booking_duration]`"
                                             x-model="day.booking_duration" :disabled="day.is_day_off"
-                                            class="border border-gray-300 rounded-lg px-2 py-1.5 text-sm w-28 focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-30 disabled:bg-gray-50">
+                                            class="border border-gray-300 rounded-lg px-2 py-1.5 text-sm w-32 focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-30 disabled:bg-gray-50">
                                         <option value="60">1 час</option>
                                         <option value="90">1.5 часа</option>
                                         <option value="120">2 часа</option>
                                         <option value="180">3 часа</option>
+                                        <option value="0">До закрытия</option>
                                     </select>
                                 </td>
                             </tr>
@@ -493,6 +495,118 @@
                     </button>
                 </div>
             </form>
+        </div>
+    </section>
+
+    {{-- ═══════════════════════════════════════
+         СЕКЦИЯ 4: Пользователи ресторана
+    ════════════════════════════════════════ --}}
+    <section x-data="{ addUserOpen: false }">
+        <div class="flex items-center justify-between mb-3">
+            <h2 class="text-lg font-semibold">Пользователи</h2>
+            <button @click="addUserOpen = true"
+                    class="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700 transition">
+                + Добавить пользователя
+            </button>
+        </div>
+
+        {{-- Модал: Добавить пользователя --}}
+        <div x-show="addUserOpen" x-cloak
+             class="fixed inset-0 bg-black/40 flex items-center justify-center z-50"
+             @keydown.escape.window="addUserOpen = false">
+            <div class="bg-white rounded-xl shadow-xl w-full max-w-md p-6" @click.stop>
+                <h3 class="font-semibold text-lg mb-4">Новый пользователь</h3>
+                <form method="POST" action="{{ route('admin.restaurants.users.store', $restaurant['id']) }}">
+                    @csrf
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Имя *</label>
+                            <input type="text" name="name" required autofocus placeholder="Иван Иванов"
+                                   class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Логин *</label>
+                            <input type="text" name="login" required placeholder="ivan_ivanov"
+                                   class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                            <input type="email" name="email" placeholder="user@example.com"
+                                   class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Роль *</label>
+                            <select name="role" required
+                                    class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                                <option value="owner">Владелец</option>
+                                <option value="manager" selected>Менеджер</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Пароль *</label>
+                            <input type="password" name="password" required minlength="8" placeholder="Минимум 8 символов"
+                                   class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        </div>
+                    </div>
+                    <div class="flex gap-3 mt-5">
+                        <button type="submit"
+                                class="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700 transition">
+                            Создать
+                        </button>
+                        <button type="button" @click="addUserOpen = false"
+                                class="px-4 py-2 rounded-lg text-sm text-gray-600 hover:text-gray-800">
+                            Отмена
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        {{-- Таблица пользователей --}}
+        <div class="bg-white rounded-xl shadow overflow-hidden">
+            @if(count($users ?? []))
+                <table class="min-w-full text-sm">
+                    <thead>
+                        <tr class="text-left text-xs text-gray-400 uppercase tracking-wide border-b bg-gray-50">
+                            <th class="px-5 py-3">Имя</th>
+                            <th class="px-5 py-3">Логин</th>
+                            <th class="px-5 py-3">Email</th>
+                            <th class="px-5 py-3">Роль</th>
+                            <th class="px-5 py-3"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach($users as $user)
+                        <tr class="border-b last:border-0 hover:bg-gray-50">
+                            <td class="px-5 py-3 font-medium">{{ $user['name'] }}</td>
+                            <td class="px-5 py-3 font-mono text-xs text-gray-600">{{ $user['login'] ?? '—' }}</td>
+                            <td class="px-5 py-3 text-gray-500">{{ $user['email'] ?? '—' }}</td>
+                            <td class="px-5 py-3">
+                                <span class="px-2 py-0.5 rounded-full text-xs font-medium
+                                    {{ $user['role']['value'] === 'owner' ? 'bg-indigo-100 text-indigo-700' : 'bg-gray-100 text-gray-600' }}">
+                                    {{ $user['role']['label'] }}
+                                </span>
+                            </td>
+                            <td class="px-5 py-3 text-right">
+                                <form method="POST"
+                                      action="{{ route('admin.restaurants.users.destroy', [$restaurant['id'], $user['id']]) }}"
+                                      onsubmit="return confirm('Удалить пользователя «{{ $user['name'] }}»?')">
+                                    @csrf @method('DELETE')
+                                    <button type="submit"
+                                            class="text-sm text-red-500 hover:text-red-700 px-2 py-1 rounded hover:bg-red-50 transition">
+                                        Удалить
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            @else
+                <div class="p-10 text-center text-gray-400">
+                    <p>Пользователей пока нет. Добавьте первого.</p>
+                </div>
+            @endif
         </div>
     </section>
 
@@ -513,8 +627,8 @@ function scheduleEditor(apiData) {
             is_day_off:       d.is_day_off !== undefined ? d.is_day_off : true,
             open_time:        d.open_time  || '11:00',
             close_time:       d.close_time || '23:00',
-            slot_duration:    String(d.slot_duration    || 30),
-            booking_duration: String(d.booking_duration || 120),
+            slot_duration:    String(d.slot_duration    ?? 30),
+            booking_duration: String(d.booking_duration ?? 0),
         };
     });
 
@@ -524,7 +638,7 @@ function scheduleEditor(apiData) {
         dayNames,
         days,
         globalSlot:    firstWorking ? String(firstWorking.slot_duration)    : '30',
-        globalBooking: firstWorking ? String(firstWorking.booking_duration)  : '120',
+        globalBooking: firstWorking ? String(firstWorking.booking_duration)  : '0',
 
         applyGlobal(field, value) {
             this.days.forEach(d => { if (!d.is_day_off) d[field] = value; });

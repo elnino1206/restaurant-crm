@@ -32,17 +32,21 @@ class BookingPageController extends Controller
         $request->validate([
             'date' => ['required', 'date_format:Y-m-d'],
             'guests_count' => ['required', 'integer', 'min:1', 'max:100'],
-            'duration_minutes' => ['nullable', 'integer', 'min:30', 'max:480'],
+            'duration_minutes' => ['nullable', 'integer', 'min:0', 'max:480'],
         ]);
 
         $restaurant = Restaurant::where('slug', $slug)->firstOrFail();
+
+        $dayOfWeek = Carbon::parse($request->input('date'), $restaurant->timezone)->dayOfWeekIso - 1;
+        $slotConfig = $restaurant->timeSlotConfigs()->where('day_of_week', $dayOfWeek)->first();
+        $configuredDuration = $slotConfig ? (int) $slotConfig->booking_duration : 0;
 
         $slots = app(SlotCalculator::class)->calculate(
             SlotQueryDTO::from([
                 'restaurantId' => $restaurant->id,
                 'date' => Carbon::parse($request->input('date'), $restaurant->timezone),
                 'guestsCount' => $request->integer('guests_count'),
-                'durationMinutes' => $request->integer('duration_minutes', 120),
+                'durationMinutes' => $configuredDuration,
             ])
         );
 
@@ -81,8 +85,16 @@ class BookingPageController extends Controller
             'Y-m-d H:i',
             $request->input('date').' '.$request->input('time'),
             $restaurant->timezone
-        );
-        $bookingEnd = $bookingStart->copy()->addMinutes(120);
+        )->utc();
+
+        $dayOfWeek = Carbon::parse($request->input('date'), $restaurant->timezone)->dayOfWeekIso - 1;
+        $slotConfig = $restaurant->timeSlotConfigs()->where('day_of_week', $dayOfWeek)->first();
+        $configuredDuration = $slotConfig ? (int) $slotConfig->booking_duration : 0;
+
+        // 0 = open-ended: runs until restaurant closes, auto-completed by scheduler
+        $bookingEnd = $configuredDuration > 0
+            ? $bookingStart->copy()->addMinutes($configuredDuration)
+            : null;
 
         try {
             $booking = app(CreateBookingAction::class)->handle(

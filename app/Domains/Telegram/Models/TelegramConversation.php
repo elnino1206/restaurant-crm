@@ -3,6 +3,7 @@
 namespace App\Domains\Telegram\Models;
 
 use App\Domains\Restaurant\Models\Restaurant;
+use App\Domains\Telegram\Enums\TelegramChatState;
 use App\Infrastructure\RestaurantScope;
 use App\Shared\Concerns\HasUuid;
 use Illuminate\Database\Eloquent\Model;
@@ -25,6 +26,7 @@ class TelegramConversation extends Model
     {
         return [
             'telegram_user_id' => 'integer',
+            'state' => TelegramChatState::class,
             'payload' => 'array',
             'failed_attempts' => 'integer',
             'expires_at' => 'datetime',
@@ -39,5 +41,20 @@ class TelegramConversation extends Model
     public function restaurant(): BelongsTo
     {
         return $this->belongsTo(Restaurant::class);
+    }
+
+    public function isIdle(): bool
+    {
+        return $this->state === TelegramChatState::Idle;
+    }
+
+    public function isInBookingFlow(): bool
+    {
+        return $this->state->isBookingFlow();
+    }
+
+    public function isInCancellationFlow(): bool
+    {
+        return $this->state->isCancellationFlow();
     }
 }

@@ -17,8 +17,8 @@ return new class extends Migration
             $table->time('close_time')->nullable();
             // slot grid step in minutes (e.g. 30 → 12:00, 12:30, 13:00…)
             $table->unsignedSmallInteger('slot_duration')->default(30);
-            // default booking length in minutes
-            $table->unsignedSmallInteger('booking_duration')->default(120);
+            // default booking length in minutes (0 = until closing)
+            $table->unsignedSmallInteger('booking_duration')->default(0);
             $table->boolean('is_day_off')->default(false);
             $table->timestampsTz();
 

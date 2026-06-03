@@ -14,12 +14,12 @@ class AuthController extends Controller
     public function login(Request $request): JsonResponse
     {
         $request->validate([
-            'email'    => ['required', 'email'],
+            'login' => ['required', 'string'],
             'password' => ['required', 'string'],
-            'ability'  => ['nullable', Rule::in(['read', 'write', 'bookings', 'full_access'])],
+            'ability' => ['nullable', Rule::in(['read', 'write', 'bookings', 'full_access'])],
         ]);
 
-        $user = User::where('email', $request->email)->first();
+        $user = User::where('login', $request->login)->first();
 
         if (! $user || ! Hash::check($request->password, $user->password)) {
             return response()->json(['message' => 'Invalid credentials.'], 401);
@@ -29,7 +29,7 @@ class AuthController extends Controller
         $token = $user->createToken('api-token', [$ability]);
 
         return response()->json([
-            'data'    => ['token' => $token->plainTextToken],
+            'data' => ['token' => $token->plainTextToken],
             'message' => 'OK',
         ]);
     }

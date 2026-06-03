@@ -31,7 +31,7 @@ class TimeSlotConfigController extends Controller
                 'open_time' => null,
                 'close_time' => null,
                 'slot_duration' => 30,
-                'booking_duration' => 120,
+                'booking_duration' => 0,
                 'is_day_off' => true,
             ];
         });
@@ -50,7 +50,7 @@ class TimeSlotConfigController extends Controller
             'configs.*.open_time' => ['nullable', 'date_format:H:i'],
             'configs.*.close_time' => ['nullable', 'date_format:H:i', 'after:configs.*.open_time'],
             'configs.*.slot_duration' => ['nullable', 'integer', 'min:15', 'max:120'],
-            'configs.*.booking_duration' => ['nullable', 'integer', 'min:30', 'max:480'],
+            'configs.*.booking_duration' => ['nullable', 'integer', 'min:0', 'max:480'],
         ]);
 
         foreach ($request->input('configs') as $config) {
@@ -61,7 +61,7 @@ class TimeSlotConfigController extends Controller
                     'open_time' => $config['is_day_off'] ? null : ($config['open_time'] ?? null),
                     'close_time' => $config['is_day_off'] ? null : ($config['close_time'] ?? null),
                     'slot_duration' => $config['slot_duration'] ?? 30,
-                    'booking_duration' => $config['booking_duration'] ?? 120,
+                    'booking_duration' => $config['booking_duration'] ?? 0,
                 ]
             );
         }

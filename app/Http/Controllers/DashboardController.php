@@ -18,7 +18,7 @@ class DashboardController extends Controller
     public function index(Request $request)
     {
         $token = Http::post("{$this->internalBase}/auth/login", [
-            'email' => 'owner@test-restaurant.com',
+            'login' => 'owner',
             'password' => 'password',
         ])->json('data.token');
 

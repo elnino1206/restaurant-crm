@@ -6,7 +6,9 @@ use App\Domains\Booking\Actions\FindOrCreateCustomerAction;
 use App\Domains\Booking\DTO\CreateBookingDTO;
 use App\Domains\Booking\DTO\CreateCustomerDTO;
 use App\Domains\Booking\Enums\BookingSource;
+use App\Domains\Restaurant\Models\Restaurant;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Carbon;
 use Illuminate\Validation\Rule;
 
 class CreateBookingRequest extends FormRequest
@@ -21,7 +23,7 @@ class CreateBookingRequest extends FormRequest
         return [
             'guests_count' => ['required', 'integer', 'min:1', 'max:100'],
             'booking_start' => ['required', 'date', 'after:now'],
-            'booking_end' => ['required', 'date', 'after:booking_start'],
+            'booking_end' => ['nullable', 'date', 'after:booking_start'],
             'table_id' => ['nullable', 'uuid'],
             'customer_id' => ['nullable', 'uuid', 'required_without:customer_phone'],
             'customer_name' => ['nullable', 'string', 'max:255'],
@@ -33,11 +35,12 @@ class CreateBookingRequest extends FormRequest
 
     public function toDTO(): CreateBookingDTO
     {
+        $restaurantId = auth()->user()->restaurant_id;
+        $timezone = Restaurant::find($restaurantId)?->timezone ?? 'UTC';
+
         $customerId = $this->input('customer_id');
 
         if (! $customerId && $this->filled('customer_phone')) {
-            $restaurantId = auth()->user()->restaurant_id;
-
             $customer = app(FindOrCreateCustomerAction::class)->handle(
                 CreateCustomerDTO::from([
                     'restaurantId' => $restaurantId,
@@ -50,10 +53,12 @@ class CreateBookingRequest extends FormRequest
         }
 
         return CreateBookingDTO::from([
-            'restaurantId' => auth()->user()->restaurant_id,
+            'restaurantId' => $restaurantId,
             'guestsCount' => $this->integer('guests_count'),
-            'bookingStart' => $this->input('booking_start'),
-            'bookingEnd' => $this->input('booking_end'),
+            'bookingStart' => Carbon::parse($this->input('booking_start'), $timezone)->utc(),
+            'bookingEnd' => $this->filled('booking_end')
+                ? Carbon::parse($this->input('booking_end'), $timezone)->utc()
+                : null,
             'tableId' => $this->input('table_id'),
             'customerId' => $customerId,
             'comment' => $this->input('comment'),

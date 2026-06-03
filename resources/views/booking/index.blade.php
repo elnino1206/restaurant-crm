@@ -855,9 +855,8 @@ function booking(slug, timezone, restaurantName, address) {
                         'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content,
                     },
                     body: JSON.stringify({
-                        date:             this.selectedDate,
-                        guests_count:     this.guests,
-                        duration_minutes: 120,
+                        date:         this.selectedDate,
+                        guests_count: this.guests,
                     }),
                 });
                 const data = await r.json();

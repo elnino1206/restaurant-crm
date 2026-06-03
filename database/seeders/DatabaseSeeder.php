@@ -19,6 +19,7 @@ class DatabaseSeeder extends Seeder
             ['email' => 'admin@restaurant-crm.com'],
             [
                 'name' => 'Super Admin',
+                'login' => 'admin',
                 'password' => Hash::make('password'),
                 'role' => UserRole::SuperAdmin,
             ]
@@ -39,6 +40,7 @@ class DatabaseSeeder extends Seeder
             ['email' => 'owner@test-restaurant.com'],
             [
                 'name' => 'Owner',
+                'login' => 'owner',
                 'password' => Hash::make('password'),
                 'role' => UserRole::Owner,
                 'restaurant_id' => $restaurant->id,
@@ -62,15 +64,14 @@ class DatabaseSeeder extends Seeder
             );
         }
 
-        // Work schedule: Mon–Fri 11:00–23:00, Sat–Sun 11:00–00:00
         $schedule = [
-            0 => ['open' => '11:00', 'close' => '23:00', 'off' => false], // Пн
-            1 => ['open' => '11:00', 'close' => '23:00', 'off' => false], // Вт
-            2 => ['open' => '11:00', 'close' => '23:00', 'off' => false], // Ср
-            3 => ['open' => '11:00', 'close' => '23:00', 'off' => false], // Чт
-            4 => ['open' => '11:00', 'close' => '23:00', 'off' => false], // Пт
-            5 => ['open' => '11:00', 'close' => '23:00', 'off' => false], // Сб
-            6 => ['open' => '11:00', 'close' => '22:00', 'off' => false], // Вс
+            0 => ['open' => '11:00', 'close' => '23:00', 'off' => false],
+            1 => ['open' => '11:00', 'close' => '23:00', 'off' => false],
+            2 => ['open' => '11:00', 'close' => '23:00', 'off' => false],
+            3 => ['open' => '11:00', 'close' => '23:00', 'off' => false],
+            4 => ['open' => '11:00', 'close' => '23:00', 'off' => false],
+            5 => ['open' => '11:00', 'close' => '23:00', 'off' => false],
+            6 => ['open' => '11:00', 'close' => '22:00', 'off' => false],
         ];
 
         foreach ($schedule as $day => $cfg) {

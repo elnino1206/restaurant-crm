@@ -72,22 +72,19 @@ Authorization: Bearer {token}
 
 ### POST /auth/login
 
-Получить токен доступа.
+Получить токен доступа. Аутентификация по логину и паролю.
 
-**Тело запроса:**
-
-| Поле     | Тип    | Обяз. | Описание                                           |
-|----------|--------|-------|----------------------------------------------------|
-| email    | string | да    |                                                    |
-| password | string | да    |                                                    |
-| ability  | string | нет   | `read`, `write`, `bookings`, `full_access` (по умолчанию `full_access`) |
+| Поле     | Тип    | Обяз. | Описание |
+|----------|--------|-------|----------|
+| login    | string | да    | Уникальный логин пользователя |
+| password | string | да    | |
+| ability  | string | нет   | `read`, `write`, `bookings`, `full_access` (по умолч. `full_access`) |
 
 **Пример запроса:**
 ```json
 {
-  "email": "owner@restaurant.com",
-  "password": "secret",
-  "ability": "full_access"
+  "login": "ivan_ivanov",
+  "password": "secret"
 }
 ```
 
@@ -101,7 +98,7 @@ Authorization: Bearer {token}
 }
 ```
 
-**Ответ 401** — неверные учётные данные.
+**Ответ 401** — неверный логин или пароль.
 
 ---
 
@@ -479,6 +476,112 @@ Authorization: Bearer {token}
 
 ---
 
+## Users (управление пользователями ресторана)
+
+> Доступно: `super_admin` (через `before()` в политике) и `owner` своего ресторана.
+
+### Объект User
+
+```json
+{
+  "id": "uuid",
+  "name": "Иван Иванов",
+  "login": "ivan_ivanov",
+  "email": "ivan@example.com",
+  "role": "manager",
+  "role_label": "Менеджер"
+}
+```
+
+**Роли:**
+
+| Значение  | Описание |
+|-----------|----------|
+| `owner`   | Владелец — полный доступ к ресторану |
+| `manager` | Менеджер — работа с бронями и клиентами |
+
+---
+
+### GET /restaurants/{restaurantId}/users
+
+Список пользователей ресторана.
+
+**Ответ 200:**
+```json
+{
+  "data": [
+    {
+      "id": "uuid",
+      "name": "Иван Иванов",
+      "login": "ivan_ivanov",
+      "email": "ivan@example.com",
+      "role": "manager",
+      "role_label": "Менеджер"
+    }
+  ]
+}
+```
+
+---
+
+### POST /restaurants/{restaurantId}/users
+
+Создать пользователя и привязать к ресторану.
+
+**Тело запроса:**
+
+| Поле     | Тип    | Обяз. | Описание                          |
+|----------|--------|-------|-----------------------------------|
+| name     | string | да    | До 255 символов                   |
+| login    | string | да    | Уникальный логин, до 255 символов |
+| email    | string | нет   | Email, уникальный в системе       |
+| role     | string | да    | `owner` или `manager`             |
+| password | string | да    | Минимум 8 символов                |
+
+**Пример:**
+```json
+{
+  "name": "Иван Иванов",
+  "login": "ivan_ivanov",
+  "role": "manager",
+  "password": "securepass"
+}
+```
+
+**Ответ 201:**
+```json
+{
+  "data": {
+    "id": "uuid",
+    "name": "Иван Иванов",
+    "login": "ivan_ivanov",
+    "email": null,
+    "role": "manager",
+    "role_label": "Менеджер"
+  },
+  "message": "Пользователь создан."
+}
+```
+
+**Ответ 422** — если логин или email уже заняты, или пароль < 8 символов.
+
+---
+
+### DELETE /restaurants/{restaurantId}/users/{userId}
+
+Удалить пользователя из ресторана.
+
+**Ответ 200:**
+```json
+{
+  "message": "Пользователь удалён."
+}
+```
+
+**Ответ 403** — если пользователь не принадлежит указанному ресторану.
+
+---
+
 ## Slots
 
 ### GET /slots
@@ -538,6 +641,9 @@ GET /api/v1/slots?date=2026-06-01&guests_count=4&duration_minutes=90
 | GET /restaurant/floors        | ✅          | ✅    | ✅      |
 | GET /restaurant/time-slot-configs | ✅      | ✅    | ✅      |
 | GET /slots                    | ✅          | ✅    | ✅      |
+| GET /restaurants/{id}/users   | ✅          | ✅    | ❌      |
+| POST /restaurants/{id}/users  | ✅          | ✅    | ❌      |
+| DELETE /restaurants/{id}/users/{userId} | ✅ | ✅  | ❌      |
 
 ---
 

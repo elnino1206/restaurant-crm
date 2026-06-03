@@ -12,7 +12,7 @@ class CreateBookingDTO extends Data
         public readonly string $restaurantId,
         public readonly int $guestsCount,
         public readonly Carbon $bookingStart,
-        public readonly Carbon $bookingEnd,
+        public readonly ?Carbon $bookingEnd = null,
         public readonly BookingSource $source = BookingSource::Telegram,
         public readonly ?string $tableId = null,
         public readonly ?string $customerId = null,

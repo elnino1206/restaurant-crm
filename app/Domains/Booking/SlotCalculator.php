@@ -42,8 +42,10 @@ class SlotCalculator
         $close = Carbon::parse($config->close_time);
 
         $slotStart = $dto->date->copy()->setTime($open->hour, $open->minute, 0);
+        // durationMinutes=0 means open-ended (runs until closing); reserve at least one slot step
+        $effectiveDuration = $dto->durationMinutes > 0 ? $dto->durationMinutes : $config->slot_duration;
         $lastStart = $dto->date->copy()->setTime($close->hour, $close->minute, 0)
-            ->subMinutes($dto->durationMinutes);
+            ->subMinutes($effectiveDuration);
 
         $slots = collect();
 

@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\V1\RestaurantController;
 use App\Http\Controllers\Api\V1\SlotController;
 use App\Http\Controllers\Api\V1\TableController;
 use App\Http\Controllers\Api\V1\TimeSlotConfigController;
+use App\Http\Controllers\Api\V1\UserController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function (): void {
@@ -63,5 +64,10 @@ Route::prefix('v1')->group(function (): void {
         Route::post('/restaurants/{restaurant}/floors/{floor}/tables', [TableController::class, 'store']);
         Route::patch('/restaurants/{restaurant}/tables/{table}', [TableController::class, 'update']);
         Route::delete('/restaurants/{restaurant}/tables/{table}', [TableController::class, 'destroy']);
+
+        // ── Users (super_admin / owner) ───────────────────────────────────────
+        Route::get('/restaurants/{restaurant}/users', [UserController::class, 'index']);
+        Route::post('/restaurants/{restaurant}/users', [UserController::class, 'store']);
+        Route::delete('/restaurants/{restaurant}/users/{user}', [UserController::class, 'destroy']);
     });
 });

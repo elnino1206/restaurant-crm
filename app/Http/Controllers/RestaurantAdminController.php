@@ -25,7 +25,7 @@ class RestaurantAdminController extends Controller
 
         if (! $token) {
             $token = Http::post("{$this->base}/auth/login", [
-                'email' => 'admin@restaurant-crm.com',
+                'login' => 'admin',
                 'password' => 'password',
             ])->json('data.token');
         }
@@ -67,8 +67,9 @@ class RestaurantAdminController extends Controller
         $restaurant = $api->get("{$this->base}/restaurants/{$id}")->json('data', []);
         $floors = $api->get("{$this->base}/restaurants/{$id}/floors")->json('data', []);
         $schedule = $api->get("{$this->base}/restaurants/{$id}/time-slot-configs")->json('data', []);
+        $users = $api->get("{$this->base}/restaurants/{$id}/users")->json('data', []);
 
-        return view('admin.restaurants.edit', compact('restaurant', 'floors', 'schedule'));
+        return view('admin.restaurants.edit', compact('restaurant', 'floors', 'schedule', 'users'));
     }
 
     public function updateSchedule(Request $request, string $id): RedirectResponse
@@ -111,6 +112,29 @@ class RestaurantAdminController extends Controller
         }
 
         return back()->with('success', 'Ресторан обновлён.');
+    }
+
+    // ── Users ─────────────────────────────────────────────────────────────────
+
+    public function storeUser(Request $request, string $restaurantId): RedirectResponse
+    {
+        $response = $this->api()->post(
+            "{$this->base}/restaurants/{$restaurantId}/users",
+            $request->except('_token')
+        );
+
+        if ($response->failed()) {
+            return back()->withErrors($response->json('errors', []))->withInput();
+        }
+
+        return back()->with('success', 'Пользователь создан.');
+    }
+
+    public function destroyUser(string $restaurantId, string $userId): RedirectResponse
+    {
+        $this->api()->delete("{$this->base}/restaurants/{$restaurantId}/users/{$userId}");
+
+        return back()->with('success', 'Пользователь удалён.');
     }
 
     // ── Floors ────────────────────────────────────────────────────────────────

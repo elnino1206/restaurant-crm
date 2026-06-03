@@ -38,7 +38,9 @@ class UpdateBookingAction
             $booking->booking_start = $dto->bookingStart;
         }
 
-        if ($dto->bookingEnd !== null) {
+        if ($dto->clearBookingEnd) {
+            $booking->booking_end = null;
+        } elseif ($dto->bookingEnd !== null) {
             $booking->booking_end = $dto->bookingEnd;
         }
 
