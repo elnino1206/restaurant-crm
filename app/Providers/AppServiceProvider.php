@@ -2,6 +2,11 @@
 
 namespace App\Providers;
 
+use App\Domains\Booking\Events\BookingCancelledEvent;
+use App\Domains\Booking\Events\BookingConfirmedEvent;
+use App\Domains\Booking\Events\BookingCreatedEvent;
+use App\Domains\Booking\Listeners\RecordBookingAnalyticsListener;
+use App\Domains\Booking\Listeners\SendBookingConfirmationListener;
 use App\Domains\Booking\Models\Booking;
 use App\Domains\Booking\Models\Customer;
 use App\Domains\Booking\Policies\BookingPolicy;
@@ -30,5 +35,13 @@ class AppServiceProvider extends ServiceProvider
         // Telegram webhook auto-registration
         Event::listen(RestaurantCreatedEvent::class, RegisterBotWebhookListener::class);
         Event::listen(RestaurantDeletedEvent::class, DeleteBotWebhookListener::class);
+
+        // Booking events
+        Event::listen(BookingCreatedEvent::class, SendBookingConfirmationListener::class);
+
+        $analytics = new RecordBookingAnalyticsListener;
+        Event::listen(BookingCreatedEvent::class, [$analytics, 'handleCreated']);
+        Event::listen(BookingConfirmedEvent::class, [$analytics, 'handleConfirmed']);
+        Event::listen(BookingCancelledEvent::class, [$analytics, 'handleCancelled']);
     }
 }

@@ -8,11 +8,12 @@ use Spatie\LaravelData\Data;
 class SendNotificationDTO extends Data
 {
     public function __construct(
-        public readonly string $notifiableType,
-        public readonly string $notifiableId,
+        public readonly string $restaurantId,
         public readonly NotificationChannel $channel,
-        public readonly string $notificationType,
-        public readonly array $data = [],
-        public readonly ?string $restaurantId = null,
+        public readonly string $type,
+        public readonly array $payload = [],
+        public readonly ?string $customerId = null,
+        public readonly ?string $botToken = null,
+        public readonly int|string|null $telegramChatId = null,
     ) {}
 }
