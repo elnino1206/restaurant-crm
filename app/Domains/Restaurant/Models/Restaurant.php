@@ -41,6 +41,11 @@ class Restaurant extends Model
         return $this->hasMany(User::class);
     }
 
+    public function bot(): HasOne
+    {
+        return $this->hasOne(RestaurantBot::class)->where('is_active', true)->latestOfMany();
+    }
+
     public function bots(): HasMany
     {
         return $this->hasMany(RestaurantBot::class);

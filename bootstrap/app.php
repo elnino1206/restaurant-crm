@@ -4,6 +4,8 @@ use App\Domains\Booking\Exceptions\BookingConflictException;
 use App\Domains\Booking\Exceptions\BookingNotFoundException;
 use App\Domains\Booking\Exceptions\CustomerNotFoundException;
 use App\Domains\Booking\Exceptions\NoTablesAvailableException;
+use App\Domains\Telegram\Commands\DeleteWebhookCommand;
+use App\Domains\Telegram\Commands\RegisterWebhookCommand;
 use App\Shared\Exceptions\DomainException;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Auth\AuthenticationException;
@@ -16,6 +18,10 @@ use Illuminate\Validation\ValidationException;
 use Spatie\ModelStates\Exceptions\TransitionNotFound;
 
 return Application::configure(basePath: dirname(__DIR__))
+    ->withCommands([
+        RegisterWebhookCommand::class,
+        DeleteWebhookCommand::class,
+    ])
     ->withRouting(
         web: __DIR__.'/../routes/web.php',
         api: __DIR__.'/../routes/api.php',
