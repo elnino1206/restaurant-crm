@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Domains\Restaurant\Events\RestaurantCreatedEvent;
 use App\Domains\Restaurant\Models\Floor;
 use App\Domains\Restaurant\Models\Restaurant;
 use App\Domains\Restaurant\Models\TimeSlotConfig;
@@ -114,6 +115,8 @@ class RestaurantController extends Controller
         $this->authorize('create', Restaurant::class);
 
         $restaurant = Restaurant::create($request->validated());
+
+        event(new RestaurantCreatedEvent($restaurant->id));
 
         return RestaurantResource::make($restaurant)
             ->response()
